@@ -1,119 +1,237 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
-    <title>gemuboi.js</title>
-    <link rel="icon" href="img/favicon.ico" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
-    <meta name="viewport" content="width=device-width">
+    <meta charset="utf-8">
+    <title>GemuBoy</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="Emulador de Game Boy y Game Boy Color para el navegador. Funciona sin conexión.">
+    <meta name="theme-color" content="#16171c">
+    <meta name="color-scheme" content="dark">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="GemuBoy">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="img/favicon.ico" sizes="any">
+    <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/app.css">
 </head>
 
-<body class="bg-light text-dark">
-    <div class="container-fluid my-3">
-        <div class="row">
-            <div class="col-md-2"></div>
-            <div class="col-md">
-                <main class="container px-0">
-                    <div class="container my-3 text-center">
-                        <h1 class="display-6"><span class="fw-bold">gemuboi</span>.js</h1>
-                    </div>
-                    <div class="container px-0">
-                        <div class="row">
-                            <div class="col-md">
-                                <div class="container my-3 px-0 border rounded bg-white">
-                                    <canvas id="canvas" class="d-block w-100"
-                                        style="image-rendering: crisp-edges; image-rendering: pixelated;"></canvas>
-                                </div>
-                                <div class="container my-3 px-0">
-                                    <label for="startDemoButton" class="btn btn-dark w-100">Start Demo</label>
-                                </div>
-                                <div class="container my-3 px-0">
-                                    <label for="romFileInput" class="btn btn-dark w-100">Select ROM</label>
-                                </div>
-                                <input type="button" id="startDemoButton" class="d-none" />
-                                <input type="file" id="romFileInput" accept=".gb, .gbc" class="d-none" />
-                            </div>
-                            <div class="col-md">
-                                <div class="accordion my-3 bg-white" id="controlAccordion">
-                                    <div class="accordion-item">
-                                        <div class="accordion-header">
-                                            <button class="accordion-button collapsed" data-bs-toggle="collapse"
-                                                data-bs-target="#controls" tabindex="-1">Controls</button>
-                                        </div>
-                                        <div class="accordion-collapse collapse" id="controls"
-                                            data-bs-parent="#controlAccordion">
-                                            <div class="accordion-body">
-                                                <table class="table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Button</th>
-                                                            <th>Key</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td>Start</td>
-                                                            <td>Enter</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Select</td>
-                                                            <td>Right shift</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>A</td>
-                                                            <td>X</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>B</td>
-                                                            <td>Z</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Up</td>
-                                                            <td>Up arrow</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Down</td>
-                                                            <td>Down arrow</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Left</td>
-                                                            <td>Left arrow</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Right</td>
-                                                            <td>Right arrow</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container my-3 text-center">
-                        <a href="https://github.com/danwsong/gemuboi-js" class="link-dark" tabindex="-1">Written in
-                            pure, vanilla JavaScript.</a>
-                    </div>
-                </main>
-            </div>
-            <div class="col-md-2"></div>
+<body>
+    <div id="app">
+        <div id="screen">
+            <canvas id="canvas" width="160" height="144"></canvas>
+            <div id="lcd"></div>
+            <div id="fps" hidden></div>
+            <div id="save-indicator" aria-hidden="true">💾</div>
+            <div id="turbo-indicator" aria-hidden="true">⏩</div>
         </div>
+
+        <div id="controls" aria-hidden="true"></div>
+
+        <div id="toast" role="status" aria-live="polite"></div>
+
+        <!-- Layout editor -->
+        <div id="editor" hidden>
+            <div class="editor-head">
+                <strong id="editor-title">Editar controles</strong>
+                <span class="hint">Arrastra para mover · pellizca para redimensionar</span>
+            </div>
+            <div id="editor-chips" class="chips"></div>
+            <label class="row">
+                <span>Tamaño <output id="ed-size-out"></output></span>
+                <input type="range" id="ed-size" min="40" max="250" step="5">
+            </label>
+            <label class="row">
+                <span>Transparencia del botón <output id="ed-opacity-out"></output></span>
+                <input type="range" id="ed-opacity" min="10" max="100" step="5">
+            </label>
+            <label class="row">
+                <span>Opacidad general <output id="ed-global-out"></output></span>
+                <input type="range" id="ed-global" min="5" max="100" step="5">
+            </label>
+            <label class="row check">
+                <span>Mostrar este control</span>
+                <input type="checkbox" id="ed-visible" class="toggle">
+            </label>
+            <div class="editor-actions">
+                <button type="button" class="btn ghost" data-action="layout-reset">Restablecer</button>
+                <button type="button" class="btn primary" data-action="layout-done">Listo</button>
+            </div>
+        </div>
+
+        <!-- Menu -->
+        <div id="menu" hidden>
+            <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+                <header>
+                    <button type="button" class="icon-btn" data-action="back" id="menu-back" aria-label="Atrás">‹</button>
+                    <h1 id="menu-title"><span class="logo">GemuBoy</span></h1>
+                    <button type="button" class="icon-btn" data-action="close" id="menu-close" aria-label="Cerrar">✕</button>
+                </header>
+
+                <section class="page" data-page="main">
+                    <div id="now-playing"></div>
+                    <div class="list">
+                        <button type="button" class="item primary" data-action="resume" data-needs-game>▶<span>Continuar</span></button>
+                        <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="states" data-needs-game>💾<span>Guardar / cargar estado</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="palette">🎨<span>Paleta de colores</span></button>
+                        <button type="button" class="item" data-action="edit-layout">🎮<span>Editar controles táctiles</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="settings">⚙️<span>Ajustes</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="savedata" data-needs-game>🗂️<span>Partida (.sav): exportar / importar</span></button>
+                        <button type="button" class="item" data-action="reset" data-needs-game>🔄<span>Reiniciar juego</span></button>
+                        <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="about">ℹ️<span>Instalar y ayuda</span></button>
+                    </div>
+                </section>
+
+                <section class="page" data-page="library" data-title="Biblioteca">
+                    <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
+                        caben, en IndexedDB) para que puedas jugar sin volver a cargarlos.</p>
+                    <div id="library-list" class="cards"></div>
+                    <button type="button" class="btn primary block" data-action="open-rom">Añadir ROM…</button>
+                </section>
+
+                <section class="page" data-page="states" data-title="Estados guardados">
+                    <p class="note">Guarda la partida en cualquier momento y continúa justo donde la dejaste.</p>
+                    <div id="state-list" class="cards"></div>
+                </section>
+
+                <section class="page" data-page="palette" data-title="Paleta de colores">
+                    <p class="note" id="palette-note">Se aplica a juegos de Game Boy original. Los juegos de Game Boy
+                        Color usan sus propios colores.</p>
+                    <div id="palette-list" class="palettes"></div>
+                    <div class="custom-palette">
+                        <h2>Personalizada</h2>
+                        <div class="custom-colors">
+                            <input type="color" data-custom="0" aria-label="Color 1 (más claro)">
+                            <input type="color" data-custom="1" aria-label="Color 2">
+                            <input type="color" data-custom="2" aria-label="Color 3">
+                            <input type="color" data-custom="3" aria-label="Color 4 (más oscuro)">
+                        </div>
+                        <button type="button" class="btn block" data-action="palette-custom">Usar paleta personalizada</button>
+                    </div>
+                </section>
+
+                <section class="page" data-page="settings" data-title="Ajustes">
+                    <h2>Sonido</h2>
+                    <label class="row"><span>Volumen <output data-out="volume"></output></span>
+                        <input type="range" data-setting="volume" min="0" max="100" step="5"></label>
+                    <label class="row check"><span>Silenciar</span>
+                        <input type="checkbox" class="toggle" data-setting="muted"></label>
+                    <label class="row check" id="row-silent-switch"><span>Sonar con el iPhone en silencio</span>
+                        <input type="checkbox" class="toggle" data-setting="ignoreSilentSwitch"></label>
+
+                    <h2>Controles</h2>
+                    <label class="row"><span>Controles táctiles</span>
+                        <select data-setting="touchControls">
+                            <option value="auto">Automático</option>
+                            <option value="always">Mostrar siempre</option>
+                            <option value="never">Ocultar</option>
+                        </select></label>
+                    <label class="row"><span>Opacidad de los controles <output data-out="opacity"></output></span>
+                        <input type="range" data-setting="opacity" min="5" max="100" step="5"></label>
+                    <label class="row check"><span>Vibración al pulsar</span>
+                        <input type="checkbox" class="toggle" data-setting="vibration"></label>
+                    <label class="row"><span>Botón turbo</span>
+                        <select data-setting="turboMode">
+                            <option value="hold">Mantener pulsado</option>
+                            <option value="toggle">Activar / desactivar</option>
+                        </select></label>
+                    <label class="row"><span>Velocidad turbo</span>
+                        <select data-setting="turboSpeed">
+                            <option value="2">2×</option>
+                            <option value="3">3×</option>
+                            <option value="4">4×</option>
+                            <option value="6">6×</option>
+                            <option value="8">8×</option>
+                        </select></label>
+                    <button type="button" class="btn block" data-action="edit-layout">Editar posición, tamaño y transparencia…</button>
+
+                    <h2>Pantalla</h2>
+                    <label class="row"><span>Escalado</span>
+                        <select data-setting="scaleMode">
+                            <option value="fit">Ajustar a la pantalla</option>
+                            <option value="integer">Píxeles perfectos (entero)</option>
+                        </select></label>
+                    <label class="row check"><span>Efecto LCD (rejilla)</span>
+                        <input type="checkbox" class="toggle" data-setting="lcdEffect"></label>
+                    <label class="row check"><span>Suavizado</span>
+                        <input type="checkbox" class="toggle" data-setting="smoothing"></label>
+                    <label class="row check"><span>Mostrar FPS</span>
+                        <input type="checkbox" class="toggle" data-setting="showFps"></label>
+
+                    <h2>Guardado</h2>
+                    <label class="row check"><span>Autoguardar estado (continuar donde lo dejaste)</span>
+                        <input type="checkbox" class="toggle" data-setting="autoState"></label>
+                    <p class="note">La memoria de la partida (pila del cartucho) se guarda automáticamente en tiempo real
+                        en localStorage.</p>
+                    <div id="storage-info" class="note"></div>
+                    <button type="button" class="btn danger block" data-action="clear-data">Borrar todos los datos</button>
+                </section>
+
+                <section class="page" data-page="savedata" data-title="Partida (.sav)">
+                    <p class="note">La partida guardada por el juego se almacena automáticamente. Puedes exportarla
+                        como archivo .sav (compatible con otros emuladores) o importar una.</p>
+                    <button type="button" class="btn primary block" data-action="export-sav">Exportar .sav</button>
+                    <button type="button" class="btn block" data-action="import-sav">Importar .sav…</button>
+                </section>
+
+                <section class="page" data-page="about" data-title="Instalar y ayuda">
+                    <div id="install-box">
+                        <button type="button" class="btn primary block" data-action="install" id="install-btn" hidden>Instalar app</button>
+                        <div id="install-ios" class="note" hidden>
+                            <strong>iPhone / iPad:</strong> abre esta página en Safari, pulsa
+                            <em>Compartir</em> <span aria-hidden="true">⎋</span> y elige <em>«Añadir a pantalla de
+                                inicio»</em>. Se abrirá a pantalla completa y funcionará sin conexión.
+                        </div>
+                        <div id="install-android" class="note" hidden>
+                            <strong>Android:</strong> en Chrome abre el menú ⋮ y elige <em>«Instalar aplicación»</em>
+                            o <em>«Añadir a pantalla de inicio»</em>.
+                        </div>
+                        <div id="installed-note" class="note" hidden>✅ Ejecutándose como aplicación instalada.</div>
+                    </div>
+                    <h2>Teclado</h2>
+                    <table class="keys">
+                        <tr><td>Cruceta</td><td>Flechas / WASD</td></tr>
+                        <tr><td>A</td><td>X / K</td></tr>
+                        <tr><td>B</td><td>Z / J</td></tr>
+                        <tr><td>Start</td><td>Enter</td></tr>
+                        <tr><td>Select</td><td>Shift / Retroceso</td></tr>
+                        <tr><td>Turbo</td><td>Espacio (mantener)</td></tr>
+                        <tr><td>Menú</td><td>Esc</td></tr>
+                        <tr><td>Guardar / cargar estado</td><td>F2 / F4</td></tr>
+                    </table>
+                    <p class="note">También funcionan los mandos Bluetooth/USB (Xbox, PlayStation, 8BitDo…).</p>
+                    <p class="note">Basado en <a href="https://github.com/danwsong/gemuboi-js" target="_blank"
+                            rel="noopener">gemuboi.js</a>. Debes usar copias de seguridad de juegos que poseas.</p>
+                    <p class="note" id="version-info"></p>
+                </section>
+            </div>
+        </div>
+
+        <input type="file" id="rom-input" hidden>
+        <input type="file" id="sav-input" hidden>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
-        crossorigin="anonymous"></script>
-    <script src="js/cpu.js"></script>
-    <script src="js/display.js"></script>
-    <script src="js/sound.js"></script>
-    <script src="js/timer.js"></script>
-    <script src="js/joypad.js"></script>
-    <script src="js/serial.js"></script>
-    <script src="js/cartridge.js"></script>
-    <script src="js/rtc.js"></script>
-    <script src="js/main.js"></script>
+
+    <script src="js/cpu.js" defer></script>
+    <script src="js/display.js" defer></script>
+    <script src="js/timer.js" defer></script>
+    <script src="js/joypad.js" defer></script>
+    <script src="js/cartridge.js" defer></script>
+    <script src="js/rtc.js" defer></script>
+    <script src="js/sound.js" defer></script>
+    <script src="js/serial.js" defer></script>
+    <script src="js/storage.js" defer></script>
+    <script src="js/palettes.js" defer></script>
+    <script src="js/savestate.js" defer></script>
+    <script src="js/gamepad.js" defer></script>
+    <script src="js/app.js" defer></script>
 </body>
 
 </html>

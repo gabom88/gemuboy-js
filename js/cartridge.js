@@ -251,6 +251,7 @@ class Cartridge {
 
     writeRAM(address, value) {
         if (this.ramEnable) {
+            this.ramDirty = true;
             switch (this.cartridgeType) {
                 case 0x00:
                     break;
@@ -395,51 +396,41 @@ class Cartridge {
         }
 
         const romSize = 32768 << file[0x148];
-        if (file.length != romSize) {
-            throw 'wrong file size';
+        if (file.length < romSize) {
+            const padded = new Uint8Array(romSize);
+            padded.set(file);
+            this.rom = padded;
         }
 
         const ramSize = file[0x149];
-        if (this.hasRAM) {
-            if (this.hasBattery && this.title in localStorage) {
-                this.ram = new Uint8Array(localStorage[this.title].split(',').map(parseFloat));
-            } else {
-                switch (ramSize) {
-                    case 0x00:
-                        break;
-                    case 0x02:
-                        this.ram = new Uint8Array(0x2000);
-                        break;
-                    case 0x03:
-                        this.ram = new Uint8Array(0x8000);
-                        break;
-                    case 0x04:
-                        this.ram = new Uint8Array(0x20000);
-                        break;
-                    case 0x05:
-                        this.ram = new Uint8Array(0x10000);
-                        break;
-                    default:
-                        throw 'unknown RAM size: 0x' + ramSize.toString(16);
-                }
+        if (this.hasRAM && !this.ram) {
+            switch (ramSize) {
+                case 0x00:
+                case 0x01:
+                case 0x02:
+                    this.ram = new Uint8Array(0x2000);
+                    break;
+                case 0x03:
+                    this.ram = new Uint8Array(0x8000);
+                    break;
+                case 0x04:
+                    this.ram = new Uint8Array(0x20000);
+                    break;
+                case 0x05:
+                    this.ram = new Uint8Array(0x10000);
+                    break;
+                default:
+                    throw 'unknown RAM size: 0x' + ramSize.toString(16);
             }
         }
         if (this.hasRTC) {
-            if (this.hasBattery && (this.title + 'TIME') in localStorage) {
-                this.rtc = new RTC();
-                Object.assign(this.rtc, JSON.parse(localStorage[this.title + 'TIME']));
-            } else {
-                this.rtc = new RTC();
-            }
+            this.rtc = new RTC();
+            this.rtc.time = Math.floor(Date.now() / 1000);
         }
+        this.ramDirty = false;
     }
 
-    save() {
-        if (this.hasRAM && this.hasBattery) {
-            localStorage[this.title] = this.ram;
-        }
-        if (this.hasRTC && this.hasBattery) {
-            localStorage[this.title + 'TIME'] = JSON.stringify(this.rtc);
-        }
+    get hasSaveData() {
+        return this.hasBattery && (this.hasRAM || this.hasRTC);
     }
 }

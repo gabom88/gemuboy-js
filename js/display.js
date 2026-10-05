@@ -322,7 +322,7 @@ class Display {
                 }
             } else {
                 this.bgClear[x] = 0;
-                this.pixels[address + x] = 0xffffffff;
+                this.pixels[address + x] = Display.palette[0];
             }
         }
 
@@ -334,8 +334,7 @@ class Display {
                 const tileY = (this.ly - objY) & 0xff;
                 if (tileY < (this.objHeight ? 16 : 8)) {
                     let index = objs.length;
-                    const compObjX = this.oam[objs[index - 1] * 4 + 1] - 8;
-                    while (index > 0 && objX < compObjX) {
+                    while (index > 0 && objX < this.oam[objs[index - 1] * 4 + 1] - 8) {
                         index--;
                     }
                     objs.splice(index, 0, obj);
@@ -368,7 +367,7 @@ class Display {
                         const palette = (((this.vram[tileAddress + 1] << tileX) & 0x80) >> 6) | (((this.vram[tileAddress] << tileX) & 0x80) >> 7);
 
                         if (palette != 0 && (!priority || this.bgClear[x] == 0)) {
-                            this.pixels[address + x] = Display.palette[this.objPalette[paletteNumber][palette]];
+                            this.pixels[address + x] = Display.objPalettes[paletteNumber][this.objPalette[paletteNumber][palette]];
                         }
                     }
                 }
@@ -490,7 +489,12 @@ class Display {
     }
 
     renderFrame() {
+        this.frameReady = true;
+    }
+
+    present() {
         Display.ctx.putImageData(this.imageData, 0, 0);
+        this.frameReady = false;
     }
 
     cycle() {
@@ -560,6 +564,7 @@ Display.frameInterval = Display.frameDuration * 1000;
 Display.palette = [
     0xffffffff, 0xffaaaaaa, 0xff555555, 0xff000000,
 ];
+Display.objPalettes = [Display.palette, Display.palette];
 Display.colorPalette = Array.from(Array(0x8000), (v, k) => {
     const b = Math.floor((k >> 10) * 0xff / 0x1f);
     const g = Math.floor(((k & 0x3e0) >> 5) * 0xff / 0x1f);
@@ -572,7 +577,7 @@ Display.modes = {
     searchOAM: 2,
     transfer: 3,
 }
-Display.canvasMargin = 16;
+Display.canvasMargin = 0;
 Display.canvasWidth = Display.width + 2 * Display.canvasMargin;
 Display.canvasHeight = Display.height + 2 * Display.canvasMargin;
 Display.canvas = document.getElementById('canvas');
