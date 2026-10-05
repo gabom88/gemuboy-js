@@ -1,0 +1,222 @@
+[
+ {
+  "id": "tobutobugirldeluxe",
+  "file": "tobutobugirldeluxe.gb",
+  "thumb": "tobutobugirldeluxe.png",
+  "title": "Tobu Tobu Girl Deluxe",
+  "developer": "Tangram Games",
+  "license": "MIT",
+  "genre": "Acción",
+  "description": "Salta de nube en nube para rescatar a tu gato en este arcade vertical. Uno de los homebrew más aclamados.",
+  "url": "https://github.com/SimonLarsen/tobutobugirl-dx"
+ },
+ {
+  "id": "dawn-will-come",
+  "file": "dawn-will-come.gb",
+  "thumb": "dawn-will-come.png",
+  "title": "Dawn Will Come",
+  "developer": "eishiya",
+  "license": "MIT / CC-BY-4.0",
+  "genre": "Aventura",
+  "description": "Aventura de supervivencia: defiende la casa del vampiro hasta el amanecer. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/eishiya/DawnWillCome"
+ },
+ {
+  "id": "porklike-gb",
+  "file": "porklike-gb.gb",
+  "thumb": "porklike-gb.png",
+  "title": "Porklike GB",
+  "developer": "binji",
+  "license": "MIT",
+  "genre": "Roguelike",
+  "description": "Roguelike de mazmorras por turnos, adaptación del clásico de PICO-8. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/binji/porklike.gb"
+ },
+ {
+  "id": "shock-lobster",
+  "file": "shock-lobster.gb",
+  "thumb": "shock-lobster.png",
+  "title": "Shock Lobster",
+  "developer": "tbsp",
+  "license": "Zlib",
+  "genre": "Acción",
+  "description": "Combate frenético submarino con combos y cargas eléctricas. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/tbsp/shock-lobster"
+ },
+ {
+  "id": "ucity",
+  "file": "ucity.gbc",
+  "thumb": "ucity.png",
+  "title": "µCity",
+  "developer": "AntonioND",
+  "license": "GPL-3.0",
+  "genre": "Estrategia",
+  "description": "Simulador de construcción de ciudades al estilo SimCity, con desastres y estadísticas.",
+  "url": "https://github.com/AntonioND/ucity"
+ },
+ {
+  "id": "rebound",
+  "file": "rebound.gbc",
+  "thumb": "rebound.png",
+  "title": "Rebound",
+  "developer": "DevEd",
+  "license": "MIT",
+  "genre": "Plataformas",
+  "description": "Plataformas con física de bote: rebota para atravesar niveles. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/DevEd2/ReboundGB"
+ },
+ {
+  "id": "sushi-nights",
+  "file": "sushi-nights.gb",
+  "thumb": "sushi-nights.png",
+  "title": "Sushi Nights",
+  "developer": "Zalo",
+  "license": "MIT",
+  "genre": "Acción",
+  "description": "Balancéate con tu gancho por la ciudad repartiendo sushi a toda velocidad. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/Zal0/SushiNights"
+ },
+ {
+  "id": "renegade-rush",
+  "file": "renegade-rush.gb",
+  "thumb": "renegade-rush.png",
+  "title": "Renegade Rush",
+  "developer": "quinnp",
+  "license": "MIT",
+  "genre": "Carreras",
+  "description": "Persecuciones de coches por carretera esquivando a la policía. Finalista de la GB Compo 2021.",
+  "url": "https://github.com/QuinnPainter/Renegade-Rush"
+ },
+ {
+  "id": "aevilia",
+  "file": "aevilia.gbc",
+  "thumb": "aevilia.png",
+  "title": "Aevilia",
+  "developer": "ISSOtm y equipo",
+  "license": "Apache-2.0",
+  "genre": "RPG",
+  "description": "Aventura RPG para Game Boy Color con exploración y diálogos.",
+  "url": "https://github.com/ISSOtm/Aevilia-GB"
+ },
+ {
+  "id": "libbet",
+  "file": "libbet.gb",
+  "thumb": "libbet.png",
+  "title": "Libbet and the Magic Floor",
+  "developer": "Damian Yerrick",
+  "license": "Zlib",
+  "genre": "Puzle",
+  "description": "Rueda por el suelo mágico pintando todas las baldosas sin quedarte atrapada.",
+  "url": "https://github.com/pinobatch/libbet"
+ },
+ {
+  "id": "big2small",
+  "file": "big2small.gb",
+  "thumb": "big2small.png",
+  "title": "Big2Small",
+  "developer": "mdsteele",
+  "license": "GPL-3.0",
+  "genre": "Puzle",
+  "description": "Puzle de deslizar: guía al elefante, la ardilla y el ratón hasta su meta.",
+  "url": "https://github.com/mdsteele/big2small"
+ },
+ {
+  "id": "postie",
+  "file": "postie.gbc",
+  "thumb": "postie.png",
+  "title": "Postie",
+  "developer": "invertedHat",
+  "license": "MIT",
+  "genre": "Plataformas",
+  "description": "Plataformas de precisión: entrega el correo a toda costa. GB Showdown 2022.",
+  "url": "https://github.com/inverted-hat/postie"
+ },
+ {
+  "id": "tuff",
+  "file": "tuff.gb",
+  "thumb": "tuff.png",
+  "title": "Tuff",
+  "developer": "BonsaiDen",
+  "license": "MIT",
+  "genre": "Plataformas",
+  "description": "Metroidvania de plataformas: explora un mundo enorme y gana nuevas habilidades.",
+  "url": "https://github.com/BonsaiDen/Tuff.gb"
+ },
+ {
+  "id": "geometrix",
+  "file": "geometrix.gbc",
+  "thumb": "geometrix.png",
+  "title": "Geometrix",
+  "developer": "AntonioND",
+  "license": "GPL-3.0",
+  "genre": "Puzle",
+  "description": "Puzle de combinar figuras geométricas con modo para dos jugadores.",
+  "url": "https://github.com/AntonioND/geometrix"
+ },
+ {
+  "id": "2048gb",
+  "file": "2048gb.gb",
+  "thumb": "2048gb.png",
+  "title": "2048",
+  "developer": "Sanqui",
+  "license": "Zlib",
+  "genre": "Puzle",
+  "description": "El adictivo 2048: desliza y suma fichas hasta llegar al número mágico.",
+  "url": "https://github.com/Sanqui/2048-gb"
+ },
+ {
+  "id": "gb-wordyl",
+  "file": "gb-wordyl.gb",
+  "thumb": "gb-wordyl.png",
+  "title": "GB-Wordyl",
+  "developer": "bbbbbr",
+  "license": "GPL-3.0",
+  "genre": "Palabras",
+  "description": "Adivina la palabra oculta en seis intentos, al estilo Wordle (en inglés).",
+  "url": "https://github.com/bbbbbr/gb-wordle"
+ },
+ {
+  "id": "maxpirate",
+  "file": "maxpirate.gb",
+  "thumb": "maxpirate.png",
+  "title": "Max Pirate",
+  "developer": "Lemmy Hawkins",
+  "license": "MIT",
+  "genre": "Acción",
+  "description": "Machaca zombis con tu ancla y tu cañón Bessie en esta pequeña aventura de acción.",
+  "url": "https://github.com/MWehrstedt/MaxPirate"
+ },
+ {
+  "id": "crystal-lake",
+  "file": "crystal-lake.gb",
+  "thumb": "crystal-lake.png",
+  "title": "Crystal Lake",
+  "developer": "VHVS",
+  "license": "Zlib",
+  "genre": "Acción",
+  "description": "Survival de terror ambientado en el lago Crystal: sobrevive a la noche.",
+  "url": "https://www.becomingthebeast.com/vhvs/index.html"
+ },
+ {
+  "id": "carazu",
+  "file": "carazu.gb",
+  "thumb": "carazu.png",
+  "title": "Carazu",
+  "developer": "Martin Holtkamp",
+  "license": "GPL-3.0",
+  "genre": "Plataformas",
+  "description": "Plataformas de acción con desplazamiento lateral y jefes.",
+  "url": "https://github.com/mholtkamp/carazu"
+ },
+ {
+  "id": "airaki",
+  "file": "airaki.gb",
+  "thumb": "airaki.png",
+  "title": "Airaki",
+  "developer": "furrtek",
+  "license": "GPL-3.0",
+  "genre": "Puzle",
+  "description": "Puzle de combinar gemas con toques de RPG y combates.",
+  "url": "https://github.com/furrtek/Airaki"
+ }
+]

@@ -865,3 +865,22 @@ input[type="range"] {
     opacity: 0;
     pointer-events: none;
 }
+
+.card.homebrew {
+    align-items: flex-start;
+}
+
+.card.homebrew .rom-info strong {
+    white-space: normal;
+}
+
+.card .desc {
+    margin: 4px 0 8px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: .85;
+}
+
+a.btn {
+    text-decoration: none;
+}

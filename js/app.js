@@ -438,13 +438,16 @@ const App = {
         return { bytes, name };
     },
 
-    async loadRom(bytes, { name = '', store = true, state = null } = {}) {
+    async loadRom(bytes, { name = '', title = '', store = true, state = null } = {}) {
         if (bytes.length < 0x150) {
             this.toast('El archivo no es un ROM válido', 4000);
             return false;
         }
         const info = this.romInfo(bytes);
         info.name = name || info.title;
+        if (title) {
+            info.title = title;
+        }
 
         this.stopGame();
         const gb = new GameBoy();
@@ -491,6 +494,10 @@ const App = {
                 const updated = this.library().filter((item) => item.id !== info.id);
                 updated.unshift(entry);
                 this.setLibrary(updated);
+                if (this.pendingHomebrewTag) {
+                    this.pendingHomebrewTag();
+                    this.pendingHomebrewTag = null;
+                }
                 this.toast(where === 'localStorage' ? 'ROM guardado en el dispositivo' : 'ROM guardado (IndexedDB)');
             } catch (error) {
                 console.error(error);
@@ -523,7 +530,7 @@ const App = {
         if (resume && this.settings.autoState && await Store.where(`state:${id}:auto`)) {
             state = 'auto';
         }
-        return this.loadRom(bytes, { name: entry.name, store: false, state });
+        return this.loadRom(bytes, { name: entry.name, title: entry.title, store: false, state });
     },
 
     async deleteRom(id) {
@@ -660,6 +667,7 @@ const App = {
         const render = {
             main: () => this.renderMain(),
             library: () => this.renderLibrary(),
+            homebrew: () => this.renderHomebrew(),
             states: () => this.renderStates(),
             palette: () => this.renderPalettes(),
             settings: () => this.renderSettings(),
@@ -678,7 +686,7 @@ const App = {
             now.innerHTML = `<div class="now"><small>Jugando</small><strong></strong><span class="badge">${this.game.cgb ? 'GBC' : 'GB'}</span></div>`;
             now.querySelector('strong').textContent = this.game.title;
         } else {
-            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Carga un ROM para empezar.</p>';
+            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Carga un ROM o prueba los juegos homebrew gratuitos.</p>';
         }
     },
 
@@ -714,6 +722,96 @@ const App = {
             card.querySelectorAll('[data-id]').forEach((button) => { button.dataset.id = item.id; });
             container.appendChild(card);
         }
+    },
+
+    // --- Free homebrew catalog (bundled in static/homebrew) ---
+    async homebrewCatalog() {
+        if (!this.catalog) {
+            const response = await fetch('static/homebrew/catalog.json');
+            if (!response.ok) {
+                throw new Error('catalog ' + response.status);
+            }
+            this.catalog = await response.json();
+        }
+        return this.catalog;
+    },
+
+    async renderHomebrew() {
+        const container = document.getElementById('homebrew-list');
+        let catalog;
+        try {
+            catalog = await this.homebrewCatalog();
+        } catch (error) {
+            container.innerHTML = '<p class="empty">No se pudo cargar el catálogo. Comprueba la conexión.</p>';
+            return;
+        }
+        const saved = new Set(this.library().map((item) => item.homebrew).filter(Boolean));
+        container.innerHTML = '';
+        for (const game of catalog) {
+            const card = document.createElement('div');
+            card.className = 'card homebrew';
+            card.innerHTML = `
+                <div class="thumb"><img alt="" loading="lazy"></div>
+                <div class="rom-info">
+                    <strong></strong>
+                    <small class="meta"></small>
+                    <p class="desc"></p>
+                    <div class="card-actions">
+                        <button type="button" class="btn primary small" data-action="play-homebrew">${saved.has(game.id) ? 'Jugar ✓' : 'Jugar'}</button>
+                        <a class="btn ghost small" target="_blank" rel="noopener">Web</a>
+                    </div>
+                </div>`;
+            card.querySelector('img').src = 'static/homebrew/' + game.thumb;
+            card.querySelector('strong').textContent = game.title;
+            card.querySelector('.meta').textContent = `${game.genre} · ${game.developer} · ${game.license}`;
+            card.querySelector('.desc').textContent = game.description;
+            card.querySelector('a').href = game.url;
+            card.querySelector('button').dataset.id = game.id;
+            container.appendChild(card);
+        }
+    },
+
+    async playHomebrew(id) {
+        const game = (await this.homebrewCatalog()).find((item) => item.id === id);
+        if (!game) {
+            return false;
+        }
+        // Already saved in the local library: play it from there (works offline).
+        const entry = this.library().find((item) => item.homebrew === id);
+        if (entry && await Store.where('rom:' + entry.id)) {
+            return this.loadFromLibrary(entry.id);
+        }
+        this.toast('Descargando ' + game.title + '…', 10000);
+        let bytes;
+        try {
+            const response = await fetch('static/homebrew/' + game.file);
+            if (!response.ok) {
+                throw new Error(String(response.status));
+            }
+            bytes = new Uint8Array(await response.arrayBuffer());
+        } catch (error) {
+            this.toast('⚠️ No se pudo descargar el juego', 4000);
+            return false;
+        }
+        if (!(await this.loadRom(bytes, { name: game.file, title: game.title }))) {
+            return false;
+        }
+        // Tag the library entry so the catalog knows it's saved.
+        const tag = () => {
+            const list = this.library();
+            const item = list.find((x) => x.id === this.game.id);
+            if (item) {
+                item.homebrew = id;
+                item.title = game.title;
+                this.setLibrary(list);
+                return true;
+            }
+            return false;
+        };
+        if (!tag()) {
+            this.pendingHomebrewTag = tag;
+        }
+        return true;
     },
 
     renderStates() {
@@ -1107,6 +1205,11 @@ const App = {
                     if (await this.restartGame()) {
                         this.closeMenu();
                     }
+                }
+                break;
+            case 'play-homebrew':
+                if (await this.playHomebrew(target.dataset.id)) {
+                    this.closeMenu();
                 }
                 break;
             case 'play-rom':

@@ -26,6 +26,10 @@ Basado en [gemuboi.js](https://github.com/danwsong/gemuboi-js) de Daniel Song.
 - 🗄️ **localStorage**: se guardan los ajustes del usuario y los **ROMs** (comprimidos con gzip). Si un
   ROM no cabe en la cuota de localStorage, se guarda automáticamente en IndexedDB.
 - 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
+- 🆓 **20 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
+  Dawn Will Come, Shock Lobster…) con licencias libres, listos para jugar desde la app. Al jugar uno
+  se guarda en la biblioteca y funciona sin conexión. Créditos y licencias en
+  [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
 - ⏩ Turbo (2×–8×, mantener o alternar), teclado y mandos Bluetooth/USB.
 - 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado, contador de FPS.
 

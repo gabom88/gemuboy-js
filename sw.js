@@ -28,6 +28,28 @@ const ASSETS = [
     'img/icon-maskable-512.png',
     'img/apple-touch-icon.png',
     'static/pocket.gb',
+    // Homebrew catalog (ROMs are cached on first play and saved in the library).
+    'static/homebrew/catalog.json',
+    'static/homebrew/tobutobugirldeluxe.png',
+    'static/homebrew/ucity.png',
+    'static/homebrew/porklike-gb.png',
+    'static/homebrew/shock-lobster.png',
+    'static/homebrew/libbet.png',
+    'static/homebrew/geometrix.png',
+    'static/homebrew/aevilia.png',
+    'static/homebrew/2048gb.png',
+    'static/homebrew/tuff.png',
+    'static/homebrew/big2small.png',
+    'static/homebrew/rebound.png',
+    'static/homebrew/sushi-nights.png',
+    'static/homebrew/gb-wordyl.png',
+    'static/homebrew/dawn-will-come.png',
+    'static/homebrew/maxpirate.png',
+    'static/homebrew/crystal-lake.png',
+    'static/homebrew/carazu.png',
+    'static/homebrew/airaki.png',
+    'static/homebrew/renegade-rush.png',
+    'static/homebrew/postie.png',
 ];
 
 self.addEventListener('install', (event) => {

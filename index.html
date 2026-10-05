@@ -79,6 +79,7 @@
                         <button type="button" class="item primary" data-action="resume" data-needs-game>▶<span>Continuar</span></button>
                         <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="homebrew">🆓<span>Juegos homebrew gratuitos (20)</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="states" data-needs-game>💾<span>Guardar / cargar estado</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="palette">🎨<span>Paleta de colores</span></button>
                         <button type="button" class="item" data-action="edit-layout">🎮<span>Editar controles táctiles</span></button>
@@ -95,6 +96,16 @@
                         caben, en IndexedDB) para que puedas jugar sin volver a cargarlos.</p>
                     <div id="library-list" class="cards"></div>
                     <button type="button" class="btn primary block" data-action="open-rom">Añadir ROM…</button>
+                    <button type="button" class="btn block" data-action="page" data-page-target="homebrew">🆓 Juegos homebrew gratuitos</button>
+                </section>
+
+                <section class="page" data-page="homebrew" data-title="Juegos homebrew">
+                    <p class="note">20 juegos creados por la comunidad para Game Boy, muy valorados y con licencia
+                        libre. Al jugar uno se guarda en tu biblioteca y queda disponible sin conexión.</p>
+                    <div id="homebrew-list" class="cards"></div>
+                    <p class="note">Selección del <a href="https://hh.gbdev.io" target="_blank" rel="noopener">Homebrew
+                            Hub</a> de gbdev. Cada juego pertenece a sus autores y se distribuye bajo la licencia
+                        indicada.</p>
                 </section>
 
                 <section class="page" data-page="states" data-title="Estados guardados">
