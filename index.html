@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>GemuBoy</title>
+    <title>GBoy-JS</title>
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Emulador de Game Boy y Game Boy Color para el navegador. Funciona sin conexión.">
@@ -11,7 +11,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="GemuBoy">
+    <meta name="apple-mobile-web-app-title" content="GBoy-JS">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
     <link rel="manifest" href="manifest.webmanifest">
@@ -30,7 +30,7 @@
             <div class="bz-top"><i></i><span></span><i></i></div>
             <div class="bz-led"><b></b><span>BATTERY</span></div>
         </div>
-        <div id="brand" aria-hidden="true"><b>Gemu</b><em>BOY</em><span class="color"><b>C</b><b>O</b><b>L</b><b>O</b><b>R</b></span></div>
+        <div id="brand" aria-hidden="true"><em>GBoy-JS</em><span class="color"><b>C</b><b>O</b><b>L</b><b>O</b><b>R</b></span></div>
         <div id="screen">
             <canvas id="canvas" width="160" height="144"></canvas>
             <div id="lcd"></div>
@@ -72,6 +72,27 @@
             </div>
         </div>
 
+        <!-- Screen position / size editor -->
+        <div id="screen-drag" hidden></div>
+        <div id="screen-editor" hidden>
+            <div class="editor-head">
+                <strong id="screen-editor-title">Ajustar pantalla</strong>
+                <span class="hint">Modo manual: arrastra la pantalla para moverla · pellizca o usa el deslizador para el tamaño</span>
+            </div>
+            <div class="seg" role="group" aria-label="Ajuste de pantalla">
+                <button type="button" data-action="screen-mode" data-mode="auto">Automático</button>
+                <button type="button" data-action="screen-mode" data-mode="manual">Manual</button>
+            </div>
+            <label class="row">
+                <span>Tamaño <output id="scr-size-out"></output></span>
+                <input type="range" id="scr-size" min="20" max="100" step="1">
+            </label>
+            <div class="editor-actions">
+                <button type="button" class="btn ghost" data-action="screen-reset">Restablecer</button>
+                <button type="button" class="btn primary" data-action="screen-done">Listo</button>
+            </div>
+        </div>
+
         <!-- Remap capture -->
         <div id="capture" hidden>
             <div class="capture-box">
@@ -89,27 +110,57 @@
             <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="menu-title">
                 <header>
                     <button type="button" class="icon-btn" data-action="back" id="menu-back" aria-label="Atrás">‹</button>
-                    <h1 id="menu-title"><span class="logo">GemuBoy</span></h1>
-                    <button type="button" class="icon-btn" data-action="close" id="menu-close" aria-label="Cerrar">✕</button>
+                    <h1 id="menu-title"><span class="logo">GBoy-JS</span></h1>
+                    <div class="header-actions">
+                        <button type="button" class="icon-btn" data-action="theme" id="theme-btn" aria-label="Cambiar tema de color"></button>
+                        <button type="button" class="icon-btn" data-action="close" id="menu-close" aria-label="Cerrar">✕</button>
+                    </div>
                 </header>
 
                 <section class="page" data-page="main">
                     <div id="now-playing"></div>
+                    <div class="tiles">
+                        <button type="button" class="tile primary" data-action="resume" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span>Continuar</span></button>
+                        <button type="button" class="tile" data-action="reset" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Reiniciar</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><rect x="9" y="7" width="6" height="5"/><path d="M9 16h2M13 16h2"/></svg><span>Juegos</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="saveload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="5"/></svg><span>Guardar / Cargar</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="interface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg><span>Interfaz</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 15h-4l-1 .6A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg><span>Controles</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Ajustes</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg><span>Instalar y ayuda</span></button>
+                    </div>
+                    <div class="coffee"><a href="https://www.buymeacoffee.com/bardock" target="_blank" rel="noopener"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;"></a></div>
+                </section>
+
+                <section class="page" data-page="games" data-title="Juegos">
                     <div class="list">
-                        <button type="button" class="item primary" data-action="resume" data-needs-game>▶<span>Continuar</span></button>
-                        <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="homebrew">🆓<span>Juegos homebrew gratuitos (20)</span></button>
+                        <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
+                        <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
+                    </div>
+                </section>
+
+                <section class="page" data-page="saveload" data-title="Guardar / Cargar">
+                    <p class="note" data-no-game>Carga un juego para guardar o cargar su partida.</p>
+                    <div class="list">
                         <button type="button" class="item" data-action="page" data-page-target="states" data-needs-game>💾<span>Guardar / cargar estado</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="savedata" data-needs-game>🗂️<span>Partida (.sav): exportar / importar</span></button>
+                    </div>
+                </section>
+
+                <section class="page" data-page="interface" data-title="Interfaz">
+                    <div class="list">
                         <button type="button" class="item" data-action="page" data-page-target="palette">🎨<span>Paleta de colores</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="skin">🖌️<span>Aspecto de la consola</span></button>
+                    </div>
+                </section>
+
+                <section class="page" data-page="controls" data-title="Controles">
+                    <div class="list">
                         <button type="button" class="item" data-action="edit-layout">👆<span>Editar controles táctiles</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="mapping">🎮<span>Mando Bluetooth y teclado</span></button>
-                        <button type="button" class="item" data-action="page" data-page-target="settings">⚙️<span>Ajustes</span></button>
-                        <button type="button" class="item" data-action="page" data-page-target="savedata" data-needs-game>🗂️<span>Partida (.sav): exportar / importar</span></button>
-                        <button type="button" class="item" data-action="reset" data-needs-game>🔄<span>Reiniciar juego</span></button>
-                        <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
-                        <button type="button" class="item" data-action="page" data-page-target="about">ℹ️<span>Instalar y ayuda</span></button>
+                        <button type="button" class="item" data-action="edit-screen">🖥️<span>Ajustar pantalla</span></button>
                     </div>
                 </section>
 
@@ -208,6 +259,14 @@
                             <option value="fit">Ajustar a la pantalla</option>
                             <option value="integer">Píxeles perfectos (entero)</option>
                         </select></label>
+                    <label class="row"><span>Ajuste de pantalla</span>
+                        <select data-setting="screenMode">
+                            <option value="auto">Automático</option>
+                            <option value="manual">Manual (arrastrar y cambiar tamaño)</option>
+                        </select></label>
+                    <p class="note">En automático y sin marco, la pantalla usa todo el ancho disponible. Los píxeles
+                        perfectos se aplican con el marco activado.</p>
+                    <button type="button" class="btn block" data-action="edit-screen">Ajustar posición y tamaño…</button>
                     <label class="row check"><span>Efecto LCD (rejilla)</span>
                         <input type="checkbox" class="toggle" data-setting="lcdEffect"></label>
                     <label class="row check"><span>Suavizado</span>
@@ -232,6 +291,12 @@
                     <p class="note">La memoria de la partida (pila del cartucho) se guarda automáticamente en tiempo real
                         en localStorage.</p>
                     <div id="storage-info" class="note"></div>
+
+                    <h2>Copia de seguridad de ajustes</h2>
+                    <p class="note">Exporta tus ajustes (controles, mandos, paleta, aspecto, pantalla y tema) a un
+                        archivo .json para guardarlos o pasarlos a otro dispositivo.</p>
+                    <button type="button" class="btn block" data-action="export-settings">Exportar ajustes (.json)</button>
+                    <button type="button" class="btn block" data-action="import-settings">Importar ajustes…</button>
                     <button type="button" class="btn danger block" data-action="clear-data">Borrar todos los datos</button>
                 </section>
 
@@ -280,6 +345,7 @@
 
         <input type="file" id="rom-input" hidden>
         <input type="file" id="sav-input" hidden>
+        <input type="file" id="settings-input" hidden>
     </div>
 
     <script src="js/cpu.js" defer></script>

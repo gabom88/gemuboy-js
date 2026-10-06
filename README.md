@@ -1,17 +1,17 @@
 <div align="center">
 
-<img src="img/icon-192.png" width="96" alt="GemuBoy">
+<img src="img/icon-192.png" width="96" alt="GBoy-JS">
 
-# GemuBoy
+# GBoy-JS
 
 **Emulador de Game Boy y Game Boy Color para el móvil, directamente en el navegador.**
 Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y Android.
 
 ## ▶️ [Jugar ahora: gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)
 
-[![Abrir GemuBoy](https://img.shields.io/badge/ABRIR%20EMULADOR-gabom88.github.io%2Fgemuboy--js-8bac0f?style=for-the-badge&logo=googlechrome&logoColor=white)](https://gabom88.github.io/gemuboy-js/)
+[![Abrir GBoy-JS](https://img.shields.io/badge/ABRIR%20EMULADOR-gabom88.github.io%2Fgemuboy--js-8bac0f?style=for-the-badge&logo=googlechrome&logoColor=white)](https://gabom88.github.io/gemuboy-js/)
 
-<a href="https://gabom88.github.io/gemuboy-js/"><img src="docs/screenshots/qr.png" width="160" alt="Código QR para abrir GemuBoy en el móvil"></a><br>
+<a href="https://gabom88.github.io/gemuboy-js/"><img src="docs/screenshots/qr.png" width="160" alt="Código QR para abrir GBoy-JS en el móvil"></a><br>
 <sub>Escanea el código con la cámara del móvil para abrirlo</sub>
 
 </div>
@@ -43,12 +43,12 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 | --- | --- |
 | 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Safari | 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Chrome |
 | 2. Pulsa **Compartir** ⎋ | 2. Pulsa **Instalar** (o menú ⋮ → **Instalar aplicación**) |
-| 3. Elige **«Añadir a pantalla de inicio»** | 3. Abre GemuBoy desde el icono |
+| 3. Elige **«Añadir a pantalla de inicio»** | 3. Abre GBoy-JS desde el icono |
 
 Ya instalada se abre a pantalla completa, como una app nativa, y funciona sin conexión. También
 puedes usarla directamente en el navegador sin instalar nada.
 
-**Para empezar a jugar:** pulsa **🆓 Juegos homebrew gratuitos** y elige uno, o **📂 Cargar ROM**
+**Para empezar a jugar:** abre **Juegos** y elige **🆓 Juegos homebrew gratuitos**, o **📂 Cargar ROM**
 para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 
 ## ✨ Funciones
@@ -84,6 +84,14 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.
 - ⏩ Turbo (2×–8×, mantener pulsado o activar/desactivar).
 - 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado y contador de FPS.
+- 🗂️ **Menú en tarjetas**: Continuar, Reiniciar, Juegos, Guardar / Cargar, Interfaz, Controles, Ajustes e
+  Instalar y ayuda; cada sección se abre como lista.
+- 🌗 **6 temas de color para el menú** (3 oscuros y 3 claros): se cambian con el botón de sol/luna junto a
+  la ✕.
+- 🖥️ **Ajuste de pantalla automático o manual**: en automático y sin marco la pantalla usa todo el ancho; en
+  manual puedes arrastrarla y cambiar su tamaño con un deslizador o pellizcando (Controles → Ajustar pantalla).
+- 📤 **Exportar e importar los ajustes** como `GBoy-JS_Settings_[fecha] [hora].json` (Ajustes → Copia de
+  seguridad de ajustes).
 - ⚙️ **Dos motores de emulación** (Menú → Ajustes → Motor de emulación):
   - **SameBoy** (principal): emulador de alta precisión compilado a WebAssembly. Mejor sonido,
     compatibilidad y temporización; incluye reloj de tiempo real y vibración de cartuchos con rumble.
@@ -94,7 +102,7 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 
 ## ⌨️ Teclado y mando
 
-Todas las asignaciones se pueden cambiar en **Menú → Mando Bluetooth y teclado**. Valores por defecto:
+Todas las asignaciones se pueden cambiar en **Menú → Controles → Mando Bluetooth y teclado**. Valores por defecto:
 
 | Botón | Tecla |
 | --- | --- |
@@ -110,7 +118,7 @@ Todas las asignaciones se pueden cambiar en **Menú → Mando Bluetooth y teclad
 Con mando: A/B del mando = B/A de la Game Boy (posición Nintendo), cruceta o stick izquierdo, Start,
 Select, gatillo derecho = turbo, LB/LT = guardar/cargar estado. **Start + Select** abre el menú.
 
-> **Conectar un mando Bluetooth:** emparéjalo en los ajustes de Bluetooth del teléfono, abre GemuBoy
+> **Conectar un mando Bluetooth:** emparéjalo en los ajustes de Bluetooth del teléfono, abre GBoy-JS
 > y pulsa cualquier botón del mando para que el navegador lo detecte.
 
 ## 🛠️ Para desarrolladores
@@ -141,3 +149,5 @@ app en GitHub Pages en cada push a `master`. Requiere activar una sola vez
 Motores: [SameBoy](https://github.com/LIJI32/SameBoy) de Lior Halphon (licencia Expat,
 ver [`js/sameboy/LICENSE`](js/sameboy/LICENSE)) y [gemuboi.js](https://github.com/danwsong/gemuboi-js)
 de Daniel Song. Usa solo copias de juegos que poseas legalmente.
+
+<p align="center"><a href="https://www.buymeacoffee.com/bardock" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="60" width="217"></a></p>
