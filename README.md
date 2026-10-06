@@ -84,6 +84,13 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.
 - ⏩ Turbo (2×–8×, mantener pulsado o activar/desactivar).
 - 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado y contador de FPS.
+- ⚙️ **Dos motores de emulación** (Menú → Ajustes → Motor de emulación):
+  - **SameBoy** (principal): emulador de alta precisión compilado a WebAssembly. Mejor sonido,
+    compatibilidad y temporización; incluye reloj de tiempo real y vibración de cartuchos con rumble.
+  - **gemuboi.js** (secundario): el motor ligero en JavaScript puro. Se usa automáticamente si
+    SameBoy no se puede cargar.
+  - La partida del cartucho (`.sav`) se comparte entre ambos motores; los estados guardados son
+    propios de cada motor.
 
 ## ⌨️ Teclado y mando
 
@@ -115,11 +122,22 @@ npx http-server -c-1 .
 # abre http://localhost:8080
 ```
 
+**Motor SameBoy (WebAssembly):** el resultado compilado ya está en `js/sameboy/`. Para
+recompilarlo hace falta [Emscripten](https://emscripten.org/) (`emcc`) y Python 3:
+
+```sh
+./wasm/build.sh      # descarga SameBoy en el commit de wasm/SAMEBOY_COMMIT y genera js/sameboy/
+```
+
+La interfaz en C está en [`wasm/sameboy_glue.c`](wasm/sameboy_glue.c) y los boot ROMs de código
+abierto de SameBoy en [`wasm/bootroms/`](wasm/bootroms/).
+
 **Publicación:** el workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publica la
 app en GitHub Pages en cada push a `master`. Requiere activar una sola vez
 **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ---
 
-Basado en [gemuboi.js](https://github.com/danwsong/gemuboi-js) de Daniel Song. Usa solo copias de
-juegos que poseas legalmente.
+Motores: [SameBoy](https://github.com/LIJI32/SameBoy) de Lior Halphon (licencia Expat,
+ver [`js/sameboy/LICENSE`](js/sameboy/LICENSE)) y [gemuboi.js](https://github.com/danwsong/gemuboi-js)
+de Daniel Song. Usa solo copias de juegos que poseas legalmente.
