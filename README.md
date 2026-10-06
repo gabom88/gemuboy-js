@@ -27,11 +27,13 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
     <td align="center"><img src="docs/screenshots/editor.png" width="220" alt="Editor de controles"><br><sub>Editor de controles táctiles</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/skin-picker.png" width="220" alt="Selector de aspecto"><br><sub>Aspectos de la consola</sub></td>
+    <td align="center"><img src="docs/screenshots/mapping.png" width="220" alt="Mando Bluetooth y teclado"><br><sub>Mando Bluetooth y teclado</sub></td>
     <td align="center"><img src="docs/screenshots/palette.png" width="220" alt="Paletas de color"><br><sub>Paletas con vista previa</sub></td>
-    <td align="center"><img src="docs/screenshots/menu.png" width="220" alt="Menú principal"><br><sub>Menú principal</sub></td>
-    <td align="center"></td>
   </tr>
 </table>
+
+<p align="center"><img src="docs/screenshots/skins.png" width="680" alt="Aspectos Game Boy Color Berry, Atomic Purple transparente y Teal"><br><sub>Aspectos «Berry», «Atomic Purple» (transparente) y «Teal»</sub></p>
 
 <p align="center"><img src="docs/screenshots/landscape.png" width="680" alt="Jugando en horizontal (Game Boy Color)"><br><sub>Modo horizontal con un juego de Game Boy Color</sub></p>
 
@@ -52,6 +54,11 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 ## ✨ Funciones
 
 - 📱 **PWA instalable**: pantalla completa, icono propio y funciona sin conexión.
+- 🕹️ **Aspecto de Game Boy clásica**: cuerpo gris de la Game Boy original (DMG), marco de pantalla
+  con las franjas y el piloto de encendido, cruceta negra, botones A/B granate y Start/Select inclinados.
+- 🖌️ **Aspectos (skins) intercambiables**: Game Boy gris (por defecto), colores de la Game Boy Color
+  (Berry, Grape, Kiwi, Dandelion, Teal), carcasas **transparentes** que dejan ver la placa
+  (Atomic Purple, Cristal, Verde jungla, Humo) y un tema oscuro. El marco de pantalla se puede desactivar.
 - 🎮 **Gamepad táctil multitáctil**: cruceta de 8 direcciones, A, B, Start, Select, Turbo y Menú.
   - **Editor de controles**: mueve cada botón arrastrándolo y cambia su **tamaño** (con el deslizador
     o pellizcando) y su **transparencia**. Hay opacidad general y puedes mostrar u ocultar botones.
@@ -72,10 +79,15 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   Dawn Will Come, Shock Lobster…) con licencias libres. Al jugar uno se guarda en tu biblioteca y
   funciona sin conexión. Créditos y licencias en [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
 - 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
-- ⏩ Turbo (2×–8×, mantener pulsado o activar/desactivar), teclado y mandos Bluetooth/USB.
+- 🎮 **Mandos Bluetooth/USB y teclado configurables**: asigna cada botón (A, B, Start, Select, cruceta,
+  turbo, menú y guardar/cargar estado) a la tecla o al botón del mando que quieras. Funciona con mandos
+  Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.
+- ⏩ Turbo (2×–8×, mantener pulsado o activar/desactivar).
 - 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado y contador de FPS.
 
-## ⌨️ Teclado (ordenador)
+## ⌨️ Teclado y mando
+
+Todas las asignaciones se pueden cambiar en **Menú → Mando Bluetooth y teclado**. Valores por defecto:
 
 | Botón | Tecla |
 | --- | --- |
@@ -87,6 +99,12 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 | Turbo | Espacio (mantener) |
 | Menú | Esc |
 | Guardar / cargar estado 1 | F2 / F4 |
+
+Con mando: A/B del mando = B/A de la Game Boy (posición Nintendo), cruceta o stick izquierdo, Start,
+Select, gatillo derecho = turbo, LB/LT = guardar/cargar estado. **Start + Select** abre el menú.
+
+> **Conectar un mando Bluetooth:** emparéjalo en los ajustes de Bluetooth del teléfono, abre GemuBoy
+> y pulsa cualquier botón del mando para que el navegador lo detecte.
 
 ## 🛠️ Para desarrolladores
 
