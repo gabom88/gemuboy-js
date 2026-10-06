@@ -23,6 +23,7 @@ const ASSETS = [
     'js/app.js',
     'img/favicon.ico',
     'img/icon.svg',
+    'img/grain.png',
     'img/icon-192.png',
     'img/icon-512.png',
     'img/icon-maskable-512.png',

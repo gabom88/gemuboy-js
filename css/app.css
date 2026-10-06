@@ -35,6 +35,20 @@ body {
     inset: 0;
 }
 
+#app::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* Plastic: fine grain + soft mottling, and a broad sheen across the shell. */
+#app::before {
+    background: url("../img/grain.png") 0 0 / 192px 192px repeat;
+    opacity: var(--grain-opacity, .5);
+    mix-blend-mode: soft-light;
+}
+
 #app {
     position: fixed;
     inset: 0;
@@ -43,8 +57,7 @@ body {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
-    background: var(--body-bg);
-    transition: background .3s;
+    background: var(--sheen), var(--body-bg);
 }
 
 /* ------------------------------------------------------------------ screen */
@@ -153,60 +166,120 @@ body {
     pointer-events: none;
 }
 
-/* D-pad: Game Boy style cross */
+/* Shared "printed on the case" label style (navy italic on the DMG) */
+.ctrl em {
+    font: italic 700 1em/1 "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: .08em;
+    color: var(--label);
+    white-space: nowrap;
+}
+
+/* ---- D-pad: matte cross in a recess; it tilts toward the pressed side ---- */
 .ctrl-dpad svg {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     overflow: visible;
     display: block;
 }
 
-.ctrl-dpad .cross,
-.ctrl-dpad .cross-shadow {
+.ctrl-dpad .well path {
+    fill: var(--well);
+    stroke: var(--well);
+    stroke-width: 9;
+    stroke-linejoin: round;
+    transform: translate(0, 2px);
+    opacity: .7;
+}
+
+.ctrl-dpad .tilt {
+    position: absolute;
+    inset: 0;
+    --rx: 0deg;
+    --ry: 0deg;
+    transform: perspective(260px) rotateX(var(--rx)) rotateY(var(--ry));
+    transition: transform .045s ease-out;
+}
+
+.ctrl-dpad.p-up .tilt { --rx: 13deg; }
+.ctrl-dpad.p-down .tilt { --rx: -13deg; }
+.ctrl-dpad.p-left .tilt { --ry: -13deg; }
+.ctrl-dpad.p-right .tilt { --ry: 13deg; }
+
+.ctrl-dpad .side,
+.ctrl-dpad .top,
+.ctrl-dpad .sheen,
+.ctrl-dpad .rim {
     stroke-width: 6;
     stroke-linejoin: round;
 }
 
-.ctrl-dpad .cross {
+.ctrl-dpad .side {
+    fill: var(--dpad-side);
+    stroke: var(--dpad-side);
+}
+
+.ctrl-dpad .top {
     fill: var(--dpad);
     stroke: var(--dpad);
 }
 
-.ctrl-dpad .cross-shadow {
-    fill: rgba(0, 0, 0, .3);
-    stroke: rgba(0, 0, 0, .3);
+.ctrl-dpad .sheen {
+    fill: url(#dpad-top);
+    stroke: none;
 }
 
-.ctrl-dpad .cross-shine {
-    fill: url(#dpad-shine);
+.ctrl-dpad .rim {
+    fill: none;
+    stroke: rgba(255, 255, 255, .07);
+    stroke-width: 1;
+    transform: translate(0, -.4px);
 }
 
 .ctrl-dpad .arm {
     fill: transparent;
-    transition: fill .05s;
+    transition: fill .045s;
 }
 
-.ctrl-dpad .dimple {
-    fill: rgba(0, 0, 0, .28);
-    stroke: rgba(255, 255, 255, .07);
-    stroke-width: 1;
-}
-
-.ctrl-dpad .tri {
-    fill: rgba(255, 255, 255, .13);
-}
-
+/* The pressed arm goes down into shadow, the opposite one catches light. */
 .ctrl-dpad.p-up .arm-up,
 .ctrl-dpad.p-down .arm-down,
 .ctrl-dpad.p-left .arm-left,
 .ctrl-dpad.p-right .arm-right {
-    fill: rgba(255, 255, 255, .24);
+    fill: rgba(0, 0, 0, .3);
 }
 
-.ctrl-dpad.p-up svg { transform: rotateX(8deg) translateY(1px); }
-.ctrl-dpad.p-down svg { transform: translateY(1px); }
+.ctrl-dpad.p-up .arm-down,
+.ctrl-dpad.p-down .arm-up,
+.ctrl-dpad.p-left .arm-right,
+.ctrl-dpad.p-right .arm-left {
+    fill: rgba(255, 255, 255, .07);
+}
 
-/* A / B: round convex buttons with the letter printed on the body */
+.ctrl-dpad .dimple {
+    fill: url(#dpad-dimple);
+}
+
+/* ---- A / B: matte convex buttons inside a slanted oval recess ---- */
+.ab-well {
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 999px;
+    background: var(--ab-well);
+    box-shadow:
+        inset 0 3px 4px rgba(0, 0, 0, .22),
+        inset 0 -1px 1px var(--well-light),
+        0 1px 0 var(--well-light);
+    pointer-events: none;
+    transform-origin: center;
+}
+
+.ab-well[hidden] {
+    display: none;
+}
+
 .ctrl-a .face,
 .ctrl-b .face,
 .ctrl-turbo .face,
@@ -217,52 +290,78 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform .05s, box-shadow .05s;
+    transition: transform .045s, box-shadow .045s, filter .045s;
 }
 
 .ctrl-a .face,
 .ctrl-b .face {
-    background: radial-gradient(circle at 38% 30%, var(--ab-hi) 0%, var(--ab) 45%, var(--ab-lo) 100%);
-    box-shadow: 0 3px 0 var(--ab-lo), 0 7px 12px rgba(0, 0, 0, .3);
+    background:
+        radial-gradient(70% 45% at 50% 22%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 70%),
+        linear-gradient(180deg, var(--ab-hi) 0%, var(--ab) 38%, var(--ab) 70%, var(--ab-lo) 100%);
+    box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, .3),
+        inset 0 -2px 3px rgba(0, 0, 0, .22),
+        0 3px 0 var(--ab-side),
+        0 5px 6px rgba(0, 0, 0, .28);
 }
 
 .ctrl-a.pressed .face,
 .ctrl-b.pressed .face {
     transform: translateY(3px);
-    filter: brightness(.82);
-    box-shadow: 0 0 0 var(--ab-lo), 0 2px 4px rgba(0, 0, 0, .3), inset 0 3px 8px rgba(0, 0, 0, .35);
+    filter: brightness(.9);
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, .25),
+        inset 0 -1px 2px rgba(0, 0, 0, .15),
+        0 0 0 var(--ab-side),
+        0 1px 2px rgba(0, 0, 0, .3);
 }
 
 .ctrl-a em,
 .ctrl-b em {
     position: absolute;
-    right: 2%;
-    top: 104%;
-    font: italic 800 .62em/1 "Arial Rounded MT Bold", "Helvetica Neue", Arial, sans-serif;
-    letter-spacing: .04em;
-    color: var(--label);
+    left: 50%;
+    top: 112%;
+    transform: translateX(-50%);
+    font-size: .58em;
 }
 
-/* Start / Select: slanted rubber pills with the label underneath */
+/* ---- Start / Select: rubber pills in slots, slanted with their labels ---- */
+.ctrl-start .rot,
+.ctrl-select .rot {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-25deg);
+}
+
+.ctrl-start .slot,
+.ctrl-select .slot {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: 14%;
+    height: 42%;
+    border-radius: 999px;
+    background: var(--ab-well);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, .25), 0 1px 0 var(--well-light);
+}
+
 .ctrl-start .pill,
 .ctrl-select .pill {
     position: absolute;
-    left: 14%;
-    right: 14%;
-    top: 14%;
-    height: 34%;
+    left: 16%;
+    right: 16%;
+    top: 19%;
+    height: 30%;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--pill-hi), var(--pill));
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .3), 0 0 0 2px var(--pill-groove);
-    transform: rotate(-25deg);
-    transition: transform .05s;
+    background: linear-gradient(180deg, var(--pill-hi) 0%, var(--pill) 55%, var(--pill-lo) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 2px 0 var(--pill-lo), 0 3px 3px rgba(0, 0, 0, .25);
+    transition: transform .045s, box-shadow .045s;
 }
 
 .ctrl-start.pressed .pill,
 .ctrl-select.pressed .pill {
-    transform: rotate(-25deg) translateY(2px);
-    filter: brightness(.8);
-    box-shadow: 0 0 0 2px var(--pill-groove);
+    transform: translateY(2px);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .3), 0 0 0 var(--pill-lo);
 }
 
 .ctrl-start em,
@@ -270,18 +369,20 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    top: 66%;
+    top: 70%;
     text-align: center;
-    font: italic 700 1em/1 "Arial Rounded MT Bold", "Helvetica Neue", Arial, sans-serif;
-    letter-spacing: .06em;
-    color: var(--label);
+    font-size: .86em;
 }
 
-/* Turbo and menu: small round buttons matching Start/Select */
+/* ---- Turbo and menu: small rubber buttons ---- */
 .ctrl-turbo .face,
 .ctrl-menu .face {
-    background: linear-gradient(180deg, var(--pill-hi), var(--pill));
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .3), 0 0 0 2px var(--pill-groove);
+    background: linear-gradient(180deg, var(--pill-hi) 0%, var(--pill) 55%, var(--pill-lo) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .25),
+        0 0 0 3px var(--ab-well),
+        0 2px 0 3px rgba(0, 0, 0, .08),
+        0 3px 4px 3px rgba(0, 0, 0, .12);
     color: var(--pill-text);
     font-weight: 800;
 }
@@ -294,7 +395,7 @@ body {
 .ctrl-turbo.pressed .face,
 .ctrl-menu.pressed .face {
     transform: translateY(2px);
-    filter: brightness(.8);
+    filter: brightness(.88);
 }
 
 /* Layout editor */
@@ -950,40 +1051,56 @@ a.btn {
 
 /* ------------------------------------------------------------------ skins */
 [data-skin] {
-    --body-bg: linear-gradient(170deg, #d4d2cc 0%, #c4c2bb 55%, #b8b6af 100%);
-    --bezel: #5d5e6d;
-    --bezel-text: #c4c5d4;
+    --body-bg: linear-gradient(172deg, #d3d0c8 0%, #c9c6bd 50%, #bebab1 100%);
+    --sheen: linear-gradient(115deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, .06) 100%);
+    --grain-opacity: .5;
+    --well: rgba(0, 0, 0, .1);
+    --well-light: rgba(255, 255, 255, .45);
+    --ab-well: rgba(0, 0, 0, .06);
+    --bezel: #85868f;
+    --bezel-2: #74757f;
+    --bezel-text: #e4e4ec;
     --bz-text: "DOT MATRIX WITH STEREO SOUND";
     --stripe1: #8a1f4f;
     --stripe2: #2c2f7a;
     --led: #ff2b2b;
-    --dpad: #2b2a30;
-    --ab: #a3205a;
-    --ab-hi: #d0558a;
-    --ab-lo: #6d1239;
-    --pill: #8f8d95;
-    --pill-hi: #a7a5ad;
-    --pill-groove: rgba(0, 0, 0, .12);
+    --dpad: #36363b;
+    --dpad-side: #19191c;
+    --ab: #b01d58;
+    --ab-hi: #c93f74;
+    --ab-lo: #8a1544;
+    --ab-side: #6a0f33;
+    --pill: #8e8c91;
+    --pill-hi: #a4a2a7;
+    --pill-lo: #6c6a70;
     --pill-text: #f2f2f5;
-    --label: #2d3585;
-    --brand: #2d3585;
-    --grille: rgba(0, 0, 0, .16);
+    --label: #2e3a8c;
+    --brand: #2e3a8c;
+    --grille: rgba(0, 0, 0, .2);
 }
 
 [data-skin^="gbc"] {
+    --sheen: linear-gradient(115deg, rgba(255, 255, 255, .2) 0%, rgba(255, 255, 255, 0) 35%, rgba(0, 0, 0, 0) 65%, rgba(0, 0, 0, .12) 100%);
+    --grain-opacity: .6;
+    --well: rgba(0, 0, 0, .16);
+    --well-light: rgba(255, 255, 255, .22);
+    --ab-well: rgba(0, 0, 0, .1);
     --bezel: #1f1f24;
+    --bezel-2: #17171b;
     --bezel-text: #8d8d96;
     --bz-text: "";
     --stripe1: transparent;
     --stripe2: transparent;
     --led: #3cff6a;
-    --dpad: #2a2a2f;
-    --ab: #33333a;
-    --ab-hi: #5e5e66;
-    --ab-lo: #18181c;
+    --dpad: #2c2c31;
+    --dpad-side: #121214;
+    --ab: #2f2f35;
+    --ab-hi: #4a4a52;
+    --ab-lo: #222227;
+    --ab-side: #111114;
     --pill: #3a3a41;
     --pill-hi: #4b4b53;
-    --pill-groove: rgba(0, 0, 0, .18);
+    --pill-lo: #26262b;
     --label: rgba(255, 255, 255, .85);
     --brand: rgba(255, 255, 255, .92);
     --grille: rgba(0, 0, 0, .22);
@@ -1008,7 +1125,16 @@ a.btn {
 /* Transparent shells: the circuit board shows through the tinted plastic */
 [data-skin^="clear"] {
     --pcb: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><rect width='240' height='240' fill='%231d4733'/><g fill='none' stroke='%23d0a94e' stroke-opacity='.5' stroke-width='2.5'><path d='M0 30H60L80 50H150L170 30H240'/><path d='M0 125H40L60 145V240'/><path d='M100 240V180L120 160H240'/><path d='M30 0V18'/><path d='M200 0V60L180 80H125'/><path d='M0 85H30L50 105H95'/><path d='M150 50V92'/><path d='M180 160V200H240'/></g><g fill='%23d0a94e' fill-opacity='.75'><circle cx='60' cy='30' r='3.5'/><circle cx='95' cy='105' r='3.5'/><circle cx='125' cy='80' r='3.5'/><circle cx='60' cy='240' r='3.5'/><circle cx='30' cy='18' r='3.5'/></g><rect x='110' y='96' width='64' height='44' rx='3' fill='%23141414'/><g stroke='%23a5a5a5' stroke-width='2'><path d='M116 96v-6M126 96v-6M136 96v-6M146 96v-6M156 96v-6M166 96v-6M116 140v6M126 140v6M136 140v6M146 140v6M156 140v6M166 140v6'/></g><rect x='18' y='160' width='26' height='11' rx='2' fill='%23c9b08a'/><rect x='24' y='160' width='3' height='11' fill='%238a3a2a'/><rect x='32' y='160' width='3' height='11' fill='%23333'/><circle cx='200' cy='210' r='12' fill='%232f3138'/><circle cx='200' cy='210' r='8' fill='none' stroke='%23999' stroke-opacity='.4'/><rect x='175' y='20' width='34' height='22' rx='2' fill='%23202020'/></svg>");
+    --grain-opacity: .2;
+    --sheen: linear-gradient(115deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, 0) 30%);
+    --well: rgba(0, 0, 0, .2);
+    --well-light: rgba(255, 255, 255, .18);
+    --ab-well: rgba(0, 0, 0, .14);
+    --dpad-side: rgba(0, 0, 0, .75);
+    --ab-side: rgba(0, 0, 0, .55);
+    --pill-lo: rgba(0, 0, 0, .45);
     --bezel: rgba(20, 20, 26, .88);
+    --bezel-2: rgba(12, 12, 16, .9);
     --bezel-text: #a4a4b0;
     --bz-text: "DOT MATRIX WITH STEREO SOUND";
     --stripe1: rgba(200, 60, 120, .8);
@@ -1069,6 +1195,15 @@ a.btn {
 }
 
 [data-skin="dark"] {
+    --grain-opacity: .25;
+    --sheen: none;
+    --well: rgba(0, 0, 0, .35);
+    --well-light: rgba(255, 255, 255, .05);
+    --ab-well: rgba(0, 0, 0, .25);
+    --dpad-side: #0c0c0e;
+    --ab-side: #3d0920;
+    --pill-lo: #24252b;
+    --bezel-2: #08090b;
     --body-bg: radial-gradient(120% 80% at 50% 0%, #22242c 0%, #16171c 60%);
     --bezel: #0d0e11;
     --bezel-text: #6e7280;
@@ -1080,7 +1215,6 @@ a.btn {
     --ab-lo: #5a0f30;
     --pill: #3a3c45;
     --pill-hi: #4a4c56;
-    --pill-groove: rgba(0, 0, 0, .3);
     --label: #9aa0ad;
     --brand: #9aa0ad;
     --grille: rgba(255, 255, 255, .06);
@@ -1091,9 +1225,18 @@ a.btn {
     position: absolute;
     left: 0;
     top: 0;
-    background: var(--bezel);
+    background: linear-gradient(180deg, var(--bezel) 0%, var(--bezel-2) 100%);
     border-radius: calc(var(--u) * 5) calc(var(--u) * 5) calc(var(--u) * 24) calc(var(--u) * 5);
     box-shadow: inset 0 calc(var(--u) * .6) calc(var(--u) * 1.2) rgba(0, 0, 0, .35), 0 1px 0 rgba(255, 255, 255, .35);
+    pointer-events: none;
+}
+
+#bezel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(125deg, rgba(255, 255, 255, .14) 0%, rgba(255, 255, 255, .03) 30%, rgba(255, 255, 255, 0) 31%);
     pointer-events: none;
 }
 
@@ -1166,8 +1309,23 @@ a.btn {
 }
 
 #app.framed #screen {
-    border-radius: 2px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+    border-radius: 1px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 0 3px rgba(0, 0, 0, .12);
+}
+
+/* The LCD sits behind the bezel: inner shadow from the frame edge + glass reflection. */
+#app.framed #screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    box-shadow:
+        inset 0 6px 8px -3px rgba(0, 0, 0, .55),
+        inset 5px 0 7px -4px rgba(0, 0, 0, .4),
+        inset -2px 0 4px -2px rgba(0, 0, 0, .25),
+        inset 0 -2px 3px -2px rgba(0, 0, 0, .2);
+    background: linear-gradient(125deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, .02) 35%, rgba(255, 255, 255, 0) 36%);
 }
 
 /* Logo under the screen */
@@ -1183,9 +1341,22 @@ a.btn {
     white-space: nowrap;
 }
 
+#brand b {
+    font: 800 .78em/1 "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: .01em;
+    margin-right: .18em;
+}
+
 #brand em {
-    font: italic 900 1em/1 "Arial Black", "Helvetica Neue", Arial, sans-serif;
-    letter-spacing: -.01em;
+    font: italic 500 1.05em/1 "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: .02em;
+}
+
+#brand sup {
+    font: 600 .3em/1 "Helvetica Neue", Arial, sans-serif;
+    margin-left: .15em;
+    align-self: flex-start;
+    margin-top: .9em;
 }
 
 #brand .color {
@@ -1227,7 +1398,7 @@ a.btn {
     flex: 1;
     border-radius: 99px;
     background: var(--grille);
-    box-shadow: inset 0 2px 3px rgba(0, 0, 0, .3);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, .3), 0 1px 0 var(--well-light);
 }
 
 #app.framed[data-orientation="portrait"] #speaker {

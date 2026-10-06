@@ -196,34 +196,47 @@ const Controls = {
             el.className = 'ctrl ctrl-' + id;
             el.dataset.id = id;
             if (id === 'dpad') {
-                el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">
-                    <defs>
-                        <radialGradient id="dpad-shine" cx="45%" cy="35%" r="75%">
-                            <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
-                            <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
-                            <stop offset="1" stop-color="#000" stop-opacity=".25"/>
-                        </radialGradient>
-                    </defs>
-                    <path class="cross-shadow" d="M37 9 H63 V40 H94 V66 H63 V97 H37 V66 H6 V40 H37 Z"/>
-                    <path class="cross" d="M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z"/>
-                    <path class="cross-shine" d="M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z"/>
-                    <rect class="arm arm-up" x="37" y="6" width="26" height="31"/>
-                    <rect class="arm arm-down" x="37" y="63" width="26" height="31"/>
-                    <rect class="arm arm-left" x="6" y="37" width="31" height="26"/>
-                    <rect class="arm arm-right" x="63" y="37" width="31" height="26"/>
-                    <circle class="dimple" cx="50" cy="50" r="9"/>
-                    <path class="tri" d="M50 13 L56 22 H44 Z M50 87 L56 78 H44 Z M13 50 L22 44 V56 Z M87 50 L78 44 V56 Z"/>
-                </svg>`;
+                // Recess in the body + the cross itself, which tilts toward the pressed side.
+                const cross = 'M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z';
+                el.innerHTML = `
+                    <svg class="well" viewBox="0 0 100 100" aria-hidden="true"><path d="${cross}"/></svg>
+                    <div class="tilt"><svg viewBox="0 0 100 100" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="dpad-top" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="#fff" stop-opacity=".09"/>
+                                <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+                                <stop offset="1" stop-color="#000" stop-opacity=".14"/>
+                            </linearGradient>
+                            <linearGradient id="dpad-dimple" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="#000" stop-opacity=".38"/>
+                                <stop offset="1" stop-color="#fff" stop-opacity=".1"/>
+                            </linearGradient>
+                        </defs>
+                        <path class="side" d="${cross}" transform="translate(0 4)"/>
+                        <path class="top" d="${cross}"/>
+                        <path class="sheen" d="${cross}"/>
+                        <rect class="arm arm-up" x="37" y="6" width="26" height="31"/>
+                        <rect class="arm arm-down" x="37" y="63" width="26" height="31"/>
+                        <rect class="arm arm-left" x="6" y="37" width="31" height="26"/>
+                        <rect class="arm arm-right" x="63" y="37" width="31" height="26"/>
+                        <path class="rim" d="${cross}"/>
+                        <circle class="dimple" cx="50" cy="50" r="8.5"/>
+                    </svg></div>`;
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
-                el.innerHTML = `<div class="pill"></div><em>${this.defs[id].label}</em>`;
+                el.innerHTML = `<div class="rot"><div class="slot"></div><div class="pill"></div><em>${this.defs[id].label}</em></div>`;
             } else {
                 el.innerHTML = `<div class="face"><span>${this.defs[id].label}</span></div>`;
             }
             this.layer.appendChild(el);
             this.elements[id] = el;
         }
+
+        // Slanted oval recess that holds A and B, like on the original Game Boy.
+        this.abWell = document.createElement('div');
+        this.abWell.className = 'ab-well';
+        this.layer.prepend(this.abWell);
 
         this.layer.addEventListener('pointerdown', (ev) => this.onDown(ev), { passive: false });
         this.layer.addEventListener('pointermove', (ev) => this.onMove(ev), { passive: false });
@@ -324,7 +337,47 @@ const Controls = {
                 this.rects[id] = { cx, cy, w, h };
             }
         }
+        this.renderAbWell(layout, globalOpacity);
         this.layer.classList.toggle('editing', this.editing);
+    },
+
+    renderAbWell(layout, globalOpacity) {
+        const a = this.elements.a;
+        const b = this.elements.b;
+        const visible = !a.classList.contains('hidden') && !b.classList.contains('hidden') && layout.a.visible && layout.b.visible;
+        this.abWell.hidden = !visible;
+        if (!visible) {
+            return;
+        }
+        const ra = this.rectOf(a);
+        const rb = this.rectOf(b);
+        const dx = ra.cx - rb.cx;
+        const dy = ra.cy - rb.cy;
+        const distance = Math.hypot(dx, dy);
+        const size = Math.max(ra.w, rb.w);
+        // Only draw the oval while the buttons sit reasonably close together.
+        if (distance > size * 2.6) {
+            this.abWell.hidden = true;
+            return;
+        }
+        const thickness = size * 1.28;
+        const length = distance + thickness;
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        Object.assign(this.abWell.style, {
+            width: length + 'px',
+            height: thickness + 'px',
+            transform: `translate(${(ra.cx + rb.cx) / 2 - length / 2}px, ${(ra.cy + rb.cy) / 2 - thickness / 2}px) rotate(${angle}deg)`,
+            opacity: Math.min(1, globalOpacity * Math.max(layout.a.opacity, layout.b.opacity)),
+        });
+    },
+
+    rectOf(el) {
+        const w = parseFloat(el.style.width);
+        const h = parseFloat(el.style.height);
+        const match = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(el.style.transform);
+        const x = match ? parseFloat(match[1]) : 0;
+        const y = match ? parseFloat(match[2]) : 0;
+        return { cx: x + w / 2, cy: y + h / 2, w, h };
     },
 
     // --- Hit testing ---
