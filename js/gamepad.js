@@ -1,19 +1,56 @@
 // Input handling: customizable touch overlay, keyboard and physical gamepads.
 const Input = {
     buttons: ['a', 'b', 'start', 'select', 'up', 'down', 'left', 'right'],
+
+    // Every action that can be bound to a key or a gamepad button.
+    actions: ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select', 'turbo', 'menu', 'save', 'load'],
+    actionNames: {
+        up: 'Arriba', down: 'Abajo', left: 'Izquierda', right: 'Derecha',
+        a: 'A', b: 'B', start: 'Start', select: 'Select',
+        turbo: 'Turbo', menu: 'Menú', save: 'Guardar estado 1', load: 'Cargar estado 1',
+    },
+    defaultKeys: {
+        up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'],
+        a: ['KeyX', 'KeyK'], b: ['KeyZ', 'KeyJ'], start: ['Enter'], select: ['ShiftRight', 'Backspace'],
+        turbo: ['Space'], menu: ['Escape'], save: ['F2'], load: ['F4'],
+    },
+    // Gamepad bindings: 'b<n>' = button n, 'a<n>+' / 'a<n>-' = axis n positive / negative.
+    // Defaults follow the "standard" layout (Xbox, PlayStation, Switch Pro, 8BitDo…).
+    defaultPad: {
+        up: ['b12', 'a1-'], down: ['b13', 'a1+'], left: ['b14', 'a0-'], right: ['b15', 'a0+'],
+        a: ['b1', 'b3'], b: ['b0', 'b2'], start: ['b9'], select: ['b8'],
+        turbo: ['b7', 'b5'], menu: ['b16'], save: ['b4'], load: ['b6'],
+    },
+
     touch: {},
     keys: {},
     pad: {},
-    turboKey: false,
     turboTouch: false,
-    turboPad: false,
+    keyBindings: {},
+    padBindings: {},
+    codeToActions: {},
+
+    configure(settings) {
+        this.keyBindings = Object.assign({}, this.defaultKeys, settings.keyMap || {});
+        this.padBindings = Object.assign({}, this.defaultPad, settings.padMap || {});
+        this.codeToActions = {};
+        for (const action of this.actions) {
+            for (const code of this.keyBindings[action] || []) {
+                (this.codeToActions[code] = this.codeToActions[code] || []).push(action);
+            }
+        }
+    },
+
+    actionsForKey(code) {
+        return this.codeToActions[code] || [];
+    },
 
     pressed(button) {
         return !!(this.touch[button] || this.keys[button] || this.pad[button]);
     },
 
     get turboHeld() {
-        return this.turboKey || this.turboTouch || this.turboPad;
+        return !!(this.turboTouch || this.keys.turbo || this.pad.turbo);
     },
 
     apply(joypad) {
@@ -32,39 +69,83 @@ const Input = {
     releaseAll() {
         this.touch = {};
         this.keys = {};
-        this.pad = {};
-        this.turboKey = this.turboTouch = this.turboPad = false;
+        this.turboTouch = false;
     },
 
-    keyMap: {
-        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
-        KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
-        KeyX: 'a', KeyK: 'a', KeyZ: 'b', KeyJ: 'b',
-        Enter: 'start', ShiftRight: 'select', ShiftLeft: 'select', Backspace: 'select',
-    },
-
-    // Standard gamepad mapping (Xbox/PlayStation/Switch Pro/8BitDo).
-    pollGamepads() {
+    connectedPads() {
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        const state = {};
-        let turbo = false;
-        for (const pad of pads) {
-            if (!pad || !pad.connected) {
-                continue;
+        return Array.from(pads).filter((pad) => pad && pad.connected);
+    },
+
+    // Raw inputs currently active on a gamepad, as binding strings.
+    activeInputs(pad) {
+        const active = [];
+        pad.buttons.forEach((button, i) => {
+            if (button && (button.pressed || button.value > 0.6)) {
+                active.push('b' + i);
             }
-            const b = (i) => pad.buttons[i] && pad.buttons[i].pressed;
-            state.a = state.a || b(1) || b(3);
-            state.b = state.b || b(0) || b(2);
-            state.select = state.select || b(8);
-            state.start = state.start || b(9);
-            state.up = state.up || b(12) || pad.axes[1] < -0.5;
-            state.down = state.down || b(13) || pad.axes[1] > 0.5;
-            state.left = state.left || b(14) || pad.axes[0] < -0.5;
-            state.right = state.right || b(15) || pad.axes[0] > 0.5;
-            turbo = turbo || b(7) || b(5);
+        });
+        pad.axes.forEach((value, i) => {
+            if (value > 0.6) {
+                active.push('a' + i + '+');
+            } else if (value < -0.6) {
+                active.push('a' + i + '-');
+            }
+        });
+        return active;
+    },
+
+    // Reads all connected gamepads. Returns the actions that were just pressed.
+    pollGamepads() {
+        const state = {};
+        const raw = new Set();
+        for (const pad of this.connectedPads()) {
+            const active = this.activeInputs(pad);
+            active.forEach((input) => raw.add(input));
+            for (const action of this.actions) {
+                if ((this.padBindings[action] || []).some((binding) => active.includes(binding))) {
+                    state[action] = true;
+                }
+            }
         }
+        const previous = this.pad;
         this.pad = state;
-        this.turboPad = turbo;
+        this.padRaw = raw;
+        return this.actions.filter((action) => state[action] && !previous[action]);
+    },
+
+    keyLabel(code) {
+        const names = {
+            ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Space: 'Espacio', Enter: 'Enter',
+            Escape: 'Esc', Backspace: 'Retroceso', ShiftLeft: 'Shift izq.', ShiftRight: 'Shift der.',
+            ControlLeft: 'Ctrl izq.', ControlRight: 'Ctrl der.', AltLeft: 'Alt izq.', AltRight: 'Alt der.',
+            Tab: 'Tab', MetaLeft: 'Cmd izq.', MetaRight: 'Cmd der.',
+        };
+        if (names[code]) {
+            return names[code];
+        }
+        return code.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'Num ');
+    },
+
+    padLabel(binding) {
+        // Xbox-style names for the "standard" layout (A = ✕ on PlayStation, B = ○, X = □, Y = △).
+        const standard = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Select', 'Start', 'L3', 'R3',
+            'Cruz ↑', 'Cruz ↓', 'Cruz ←', 'Cruz →', 'Home'];
+        const match = /^([ab])(\d+)([+-]?)$/.exec(binding);
+        if (!match) {
+            return binding;
+        }
+        const index = Number(match[2]);
+        if (match[1] === 'b') {
+            const pad = this.connectedPads()[0];
+            const isStandard = !pad || pad.mapping === 'standard';
+            return (isStandard && standard[index]) || 'Botón ' + index;
+        }
+        const axes = { 0: ['Stick ←', 'Stick →'], 1: ['Stick ↑', 'Stick ↓'], 2: ['Stick der. ←', 'Stick der. →'], 3: ['Stick der. ↑', 'Stick der. ↓'] };
+        if (axes[index]) {
+            return axes[index][match[3] === '-' ? 0 : 1];
+        }
+        return `Eje ${index} ${match[3]}`;
     },
 };
 
@@ -72,23 +153,23 @@ const Controls = {
     // Base sizes in "units" (1 unit ~= 1% of the shortest screen side).
     defs: {
         dpad: { name: 'Cruceta', w: 40, h: 40 },
-        a: { name: 'Botón A', w: 18, h: 18, label: 'A' },
-        b: { name: 'Botón B', w: 18, h: 18, label: 'B' },
-        select: { name: 'Select', w: 18, h: 7, label: 'SELECT' },
-        start: { name: 'Start', w: 18, h: 7, label: 'START' },
-        turbo: { name: 'Turbo', w: 12, h: 12, label: '▶▶' },
-        menu: { name: 'Menú', w: 11, h: 11, label: '☰' },
+        a: { name: 'Botón A', w: 17, h: 17, label: 'A' },
+        b: { name: 'Botón B', w: 17, h: 17, label: 'B' },
+        select: { name: 'Select', w: 16, h: 8, label: 'SELECT' },
+        start: { name: 'Start', w: 16, h: 8, label: 'START' },
+        turbo: { name: 'Turbo', w: 10, h: 10, label: '▶▶' },
+        menu: { name: 'Menú', w: 10, h: 10, label: '☰' },
     },
 
     defaultLayouts: {
         portrait: {
-            dpad: { x: 0.25, y: 0.74 },
-            a: { x: 0.86, y: 0.69 },
-            b: { x: 0.66, y: 0.77 },
-            select: { x: 0.37, y: 0.93 },
-            start: { x: 0.63, y: 0.93 },
-            turbo: { x: 0.5, y: 0.6 },
-            menu: { x: 0.9, y: 0.56 },
+            dpad: { x: 0.24, y: 0.74 },
+            a: { x: 0.85, y: 0.7 },
+            b: { x: 0.65, y: 0.765 },
+            select: { x: 0.37, y: 0.895 },
+            start: { x: 0.57, y: 0.895 },
+            turbo: { x: 0.08, y: 0.575 },
+            menu: { x: 0.92, y: 0.575 },
         },
         landscape: {
             dpad: { x: 0.12, y: 0.6 },
@@ -116,16 +197,29 @@ const Controls = {
             el.dataset.id = id;
             if (id === 'dpad') {
                 el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">
-                    <path class="arm arm-up" d="M35 6 Q35 2 39 2 H61 Q65 2 65 6 V38 H35 Z"/>
-                    <path class="arm arm-down" d="M35 62 H65 V94 Q65 98 61 98 H39 Q35 98 35 94 Z"/>
-                    <path class="arm arm-left" d="M6 35 H38 V65 H6 Q2 65 2 61 V39 Q2 35 6 35 Z"/>
-                    <path class="arm arm-right" d="M62 35 H94 Q98 35 98 39 V61 Q98 65 94 65 H62 Z"/>
-                    <rect class="hub" x="34" y="34" width="32" height="32"/>
-                    <circle class="hub-dot" cx="50" cy="50" r="7"/>
-                    <path class="tri" d="M50 10 L57 20 H43 Z M50 90 L57 80 H43 Z M10 50 L20 43 V57 Z M90 50 L80 43 V57 Z"/>
+                    <defs>
+                        <radialGradient id="dpad-shine" cx="45%" cy="35%" r="75%">
+                            <stop offset="0" stop-color="#fff" stop-opacity=".18"/>
+                            <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+                            <stop offset="1" stop-color="#000" stop-opacity=".25"/>
+                        </radialGradient>
+                    </defs>
+                    <path class="cross-shadow" d="M37 9 H63 V40 H94 V66 H63 V97 H37 V66 H6 V40 H37 Z"/>
+                    <path class="cross" d="M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z"/>
+                    <path class="cross-shine" d="M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z"/>
+                    <rect class="arm arm-up" x="37" y="6" width="26" height="31"/>
+                    <rect class="arm arm-down" x="37" y="63" width="26" height="31"/>
+                    <rect class="arm arm-left" x="6" y="37" width="31" height="26"/>
+                    <rect class="arm arm-right" x="63" y="37" width="31" height="26"/>
+                    <circle class="dimple" cx="50" cy="50" r="9"/>
+                    <path class="tri" d="M50 13 L56 22 H44 Z M50 87 L56 78 H44 Z M13 50 L22 44 V56 Z M87 50 L78 44 V56 Z"/>
                 </svg>`;
+            } else if (id === 'a' || id === 'b') {
+                el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
+            } else if (id === 'start' || id === 'select') {
+                el.innerHTML = `<div class="pill"></div><em>${this.defs[id].label}</em>`;
             } else {
-                el.innerHTML = `<span>${this.defs[id].label}</span>`;
+                el.innerHTML = `<div class="face"><span>${this.defs[id].label}</span></div>`;
             }
             this.layer.appendChild(el);
             this.elements[id] = el;
@@ -202,7 +296,7 @@ const Controls = {
         const unit = Math.min(Math.min(W, H) / 100, 5.2);
         const inset = this.app.safeInsets();
         const layout = this.layout;
-        const globalOpacity = this.app.settings.opacity;
+        const globalOpacity = this.app.settings.opacity / 100;
         this.rects = {};
         for (const id of Object.keys(this.defs)) {
             const def = this.defs[id];
@@ -220,7 +314,7 @@ const Controls = {
             el.style.width = w + 'px';
             el.style.height = h + 'px';
             el.style.transform = `translate(${cx - w / 2}px, ${cy - h / 2}px)`;
-            el.style.fontSize = (def.h < 10 ? Math.min(h * 0.45, w * 0.16) : h * 0.4) + 'px';
+            el.style.fontSize = (id === 'start' || id === 'select' ? h * 0.36 : h * 0.4) + 'px';
             el.style.opacity = this.editing ? Math.max(0.35, globalOpacity * c.opacity) * (c.visible ? 1 : 0.5)
                 : (id === 'menu' ? Math.max(0.35, globalOpacity * c.opacity) : globalOpacity * c.opacity);
             el.classList.toggle('hidden', !show && !this.editing);

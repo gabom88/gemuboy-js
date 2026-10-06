@@ -23,6 +23,14 @@
 
 <body>
     <div id="app">
+        <div id="body-deco" aria-hidden="true">
+            <div id="speaker"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div id="bezel" aria-hidden="true">
+            <div class="bz-top"><i></i><span></span><i></i></div>
+            <div class="bz-led"><b></b><span>BATTERY</span></div>
+        </div>
+        <div id="brand" aria-hidden="true"><em>GemuBoy</em><span class="color"><b>C</b><b>O</b><b>L</b><b>O</b><b>R</b></span></div>
         <div id="screen">
             <canvas id="canvas" width="160" height="144"></canvas>
             <div id="lcd"></div>
@@ -64,6 +72,18 @@
             </div>
         </div>
 
+        <!-- Remap capture -->
+        <div id="capture" hidden>
+            <div class="capture-box">
+                <strong></strong>
+                <small></small>
+                <div class="editor-actions">
+                    <button type="button" class="btn ghost" data-action="map-clear">Quitar</button>
+                    <button type="button" class="btn" data-action="map-cancel">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Menu -->
         <div id="menu" hidden>
             <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="menu-title">
@@ -82,7 +102,9 @@
                         <button type="button" class="item" data-action="page" data-page-target="homebrew">🆓<span>Juegos homebrew gratuitos (20)</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="states" data-needs-game>💾<span>Guardar / cargar estado</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="palette">🎨<span>Paleta de colores</span></button>
-                        <button type="button" class="item" data-action="edit-layout">🎮<span>Editar controles táctiles</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="skin">🖌️<span>Aspecto de la consola</span></button>
+                        <button type="button" class="item" data-action="edit-layout">👆<span>Editar controles táctiles</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="mapping">🎮<span>Mando Bluetooth y teclado</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="settings">⚙️<span>Ajustes</span></button>
                         <button type="button" class="item" data-action="page" data-page-target="savedata" data-needs-game>🗂️<span>Partida (.sav): exportar / importar</span></button>
                         <button type="button" class="item" data-action="reset" data-needs-game>🔄<span>Reiniciar juego</span></button>
@@ -127,6 +149,22 @@
                         </div>
                         <button type="button" class="btn block" data-action="palette-custom">Usar paleta personalizada</button>
                     </div>
+                </section>
+
+                <section class="page" data-page="skin" data-title="Aspecto de la consola">
+                    <label class="row check"><span>Marco de pantalla estilo Game Boy</span>
+                        <input type="checkbox" class="toggle" id="frame-toggle"></label>
+                    <div id="skin-list" class="skins"></div>
+                </section>
+
+                <section class="page" data-page="mapping" data-title="Mando y teclado">
+                    <p class="note" id="pad-status"></p>
+                    <p class="note">Toca una asignación y pulsa la tecla o el botón del mando que quieras usar. Funcionan
+                        los mandos Bluetooth y USB (Xbox, PlayStation, Switch Pro, 8BitDo, MFi…) y los mandos
+                        Bluetooth que funcionan como teclado. Los botones se muestran con nombres de Xbox (en PlayStation: A = ✕,
+                        B = ○, X = □, Y = △).</p>
+                    <div id="mapping-list" class="mapping"></div>
+                    <button type="button" class="btn block" data-action="map-reset">Restablecer valores por defecto</button>
                 </section>
 
                 <section class="page" data-page="settings" data-title="Ajustes">
@@ -207,7 +245,7 @@
                         </div>
                         <div id="installed-note" class="note" hidden>✅ Ejecutándose como aplicación instalada.</div>
                     </div>
-                    <h2>Teclado</h2>
+                    <h2>Teclado (configurable en «Mando Bluetooth y teclado»)</h2>
                     <table class="keys">
                         <tr><td>Cruceta</td><td>Flechas / WASD</td></tr>
                         <tr><td>A</td><td>X / K</td></tr>

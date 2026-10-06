@@ -8,7 +8,11 @@ const App = {
         ignoreSilentSwitch: false,
         vibration: true,
         touchControls: 'auto',
-        opacity: 65,
+        opacity: 100,
+        skin: 'dmg',
+        frame: true,
+        keyMap: {},
+        padMap: {},
         turboMode: 'hold',
         turboSpeed: '3',
         scaleMode: 'fit',
@@ -57,7 +61,11 @@ const App = {
             this.el.savInput.accept = '.sav,.srm';
         }
 
+        this.el.bezel = document.getElementById('bezel');
+        this.el.brand = document.getElementById('brand');
+        this.el.capture = document.getElementById('capture');
         Palettes.apply(this.settings);
+        Input.configure(this.settings);
         Controls.init(this);
         this.bindEvents();
         this.applySettings();
@@ -74,8 +82,31 @@ const App = {
         Store.setJSON('settings', this.settings);
     },
 
+    // Console skins: the body color/material behind the screen and controls.
+    skins: [
+        { id: 'dmg', name: 'Game Boy clásica (gris)', color: '#c8c6c0' },
+        { id: 'gbc-berry', name: 'Color · Berry', color: '#c1124e' },
+        { id: 'gbc-grape', name: 'Color · Grape', color: '#5a3d9e' },
+        { id: 'gbc-kiwi', name: 'Color · Kiwi', color: '#9cc43c' },
+        { id: 'gbc-dandelion', name: 'Color · Dandelion', color: '#f1c21b' },
+        { id: 'gbc-teal', name: 'Color · Teal', color: '#139aa3' },
+        { id: 'clear-atomic', name: 'Transparente · Atomic Purple', color: '#6b4aa3', clear: true },
+        { id: 'clear-ice', name: 'Transparente · Cristal', color: '#c9d3dc', clear: true },
+        { id: 'clear-jungle', name: 'Transparente · Verde jungla', color: '#3f8f57', clear: true },
+        { id: 'clear-smoke', name: 'Transparente · Humo', color: '#2b2c33', clear: true },
+        { id: 'dark', name: 'Oscuro', color: '#16171c' },
+    ],
+
     applySettings() {
         const s = this.settings;
+        const skin = this.skins.find((item) => item.id === s.skin) || this.skins[0];
+        this.el.app.dataset.skin = skin.id;
+        this.el.app.dataset.family = skin.id.split('-')[0];
+        this.el.app.classList.toggle('framed', !!s.frame);
+        const theme = document.querySelector('meta[name="theme-color"]');
+        if (theme) {
+            theme.content = skin.color;
+        }
         this.el.canvas.classList.toggle('smooth', !!s.smoothing);
         this.el.lcd.hidden = !s.lcdEffect;
         this.el.fps.hidden = !s.showFps;
@@ -122,30 +153,58 @@ const App = {
         this.orientation = W > H ? 'landscape' : 'portrait';
         this.el.app.dataset.orientation = this.orientation;
         const inset = this.safeInsets();
-        const margin = 6;
-        let availW = W - inset.left - inset.right - margin * 2;
+        const portrait = this.orientation === 'portrait';
+        const touch = Controls.visibleTouch;
+        const framed = !!this.settings.frame;
+        const margin = framed ? 10 : 6;
+        const availW = W - inset.left - inset.right - margin * 2;
         let availH;
-        if (this.orientation === 'portrait') {
-            const touch = Controls.visibleTouch;
-            availH = (touch ? H * 0.52 : H) - inset.top - margin * 2 - (touch ? 0 : inset.bottom);
+        if (portrait) {
+            availH = (touch ? H * 0.53 : H) - inset.top - margin * 2 - (touch ? 0 : inset.bottom);
         } else {
             availH = H - inset.top - inset.bottom - margin * 2;
         }
-        let scale = Math.max(0.5, Math.min(availW / Display.width, availH / Display.height));
+        // Bezel around the screen, as a fraction of the screen size (DMG proportions).
+        const padX = framed ? 0.13 : 0;
+        const padTop = framed ? 0.13 : 0;
+        const padBottom = framed ? 0.1 : 0;
+        const brand = framed && portrait ? 0.14 : 0;
+        const boxW = Display.width * (1 + padX * 2);
+        const boxH = Display.height * (1 + padTop + padBottom + brand);
+        let scale = Math.max(0.5, Math.min(availW / boxW, availH / boxH));
         if (this.settings.scaleMode === 'integer' && scale >= 1) {
             scale = Math.floor(scale);
         }
         const w = Math.round(Display.width * scale);
         const h = Math.round(Display.height * scale);
-        const left = inset.left + margin + (availW - w) / 2;
-        let top;
-        if (this.orientation === 'portrait' && Controls.visibleTouch) {
-            top = inset.top + margin + Math.max(0, (availH - h) / 2);
-        } else {
-            top = inset.top + margin + (availH - h) / 2;
-        }
+        const totalW = w * (1 + padX * 2);
+        const totalH = h * (1 + padTop + padBottom + brand);
+        const boxLeft = inset.left + margin + (availW - totalW) / 2;
+        const boxTop = inset.top + margin + Math.max(0, (availH - totalH) / 2);
+        const left = boxLeft + w * padX;
+        const top = boxTop + h * padTop;
         Object.assign(this.el.screen.style, { width: w + 'px', height: h + 'px', transform: `translate(${left}px, ${top}px)` });
         this.el.lcd.style.backgroundSize = `${scale}px ${scale}px`;
+
+        this.el.bezel.hidden = !framed;
+        if (framed) {
+            const bezelH = h * (1 + padTop + padBottom);
+            Object.assign(this.el.bezel.style, {
+                width: totalW + 'px',
+                height: bezelH + 'px',
+                transform: `translate(${boxLeft}px, ${boxTop}px)`,
+            });
+            this.el.bezel.style.setProperty('--u', (h / 100) + 'px');
+        }
+        this.el.brand.hidden = !brand;
+        if (brand) {
+            Object.assign(this.el.brand.style, {
+                transform: `translate(${boxLeft}px, ${boxTop + h * (1 + padTop + padBottom)}px)`,
+                width: totalW + 'px',
+                height: h * brand + 'px',
+                fontSize: h * brand * 0.5 + 'px',
+            });
+        }
         Controls.render();
     },
 
@@ -155,10 +214,16 @@ const App = {
         const dt = now - this.lastTime;
         this.lastTime = now;
 
-        Input.pollGamepads();
-        if (Input.pad.start && Input.pad.select && !this.menuOpen && this.gb) {
-            this.openMenu();
+        const justPressed = Input.pollGamepads();
+        if (this.capture) {
+            this.pollCapture();
+        } else {
+            this.handleActions(justPressed, 'pad');
+            if (Input.pad.start && Input.pad.select && !this.menuOpen && this.gb) {
+                this.openMenu();
+            }
         }
+        this.el.app.classList.toggle('led-on', this.running && !document.hidden);
 
         if (!this.running || this.isPaused()) {
             this.accumulator = 0;
@@ -206,6 +271,130 @@ const App = {
         }
         this.cycles -= Display.cpuCyclesPerFrame;
         return true;
+    },
+
+    // One-shot actions from the keyboard or a gamepad (menu, save/load state).
+    handleActions(actions, source) {
+        for (const action of actions) {
+            if (action === 'menu') {
+                if (Controls.editing) {
+                    this.stopLayoutEditor();
+                } else if (this.menuOpen) {
+                    this.closeMenu();
+                } else {
+                    this.openMenu();
+                }
+            } else if (!this.menuOpen && this.gb && action === 'save') {
+                this.saveState('1');
+            } else if (!this.menuOpen && this.gb && action === 'load') {
+                this.loadState('1');
+            } else if (source === 'pad' && this.menuOpen && action === 'start' && this.gb && this.page === 'main') {
+                this.closeMenu();
+            }
+        }
+    },
+
+    // --- Remapping ---
+    startCapture(action, type) {
+        this.capture = { action, type, ignore: new Set(Input.padRaw || []) };
+        Input.releaseAll();
+        const text = type === 'key'
+            ? `Pulsa una tecla para «${Input.actionNames[action]}»`
+            : `Pulsa un botón del mando para «${Input.actionNames[action]}»`;
+        this.el.capture.querySelector('strong').textContent = text;
+        this.el.capture.querySelector('small').textContent = type === 'key'
+            ? 'Esc para cancelar · Supr para quitar la asignación'
+            : (Input.connectedPads().length ? 'Mando detectado: ' + Input.connectedPads()[0].id.split('(')[0].trim()
+                : 'No se detecta ningún mando: conéctalo por Bluetooth y pulsa cualquier botón.');
+        this.el.capture.hidden = false;
+    },
+
+    pollCapture() {
+        if (this.capture.type !== 'pad') {
+            return;
+        }
+        const raw = Input.padRaw || new Set();
+        // Forget inputs held when the capture started once they are released.
+        for (const input of [...this.capture.ignore]) {
+            if (!raw.has(input)) {
+                this.capture.ignore.delete(input);
+            }
+        }
+        const fresh = [...raw].find((input) => !this.capture.ignore.has(input));
+        if (fresh) {
+            this.finishCapture(fresh);
+        } else if (Input.connectedPads().length) {
+            this.el.capture.querySelector('small').textContent = 'Mando detectado: ' + Input.connectedPads()[0].id.split('(')[0].trim();
+        }
+    },
+
+    finishCapture(value, clear = false) {
+        const { action, type } = this.capture;
+        this.capture = null;
+        this.el.capture.hidden = true;
+        if (value || clear) {
+            const mapName = type === 'key' ? 'keyMap' : 'padMap';
+            const map = this.settings[mapName] = this.settings[mapName] || {};
+            map[action] = clear ? [] : [value];
+            // A key/button controls a single action: remove it from the others.
+            if (!clear) {
+                const defaults = type === 'key' ? Input.defaultKeys : Input.defaultPad;
+                for (const other of Input.actions) {
+                    if (other === action) {
+                        continue;
+                    }
+                    const current = map[other] || defaults[other] || [];
+                    if (current.includes(value)) {
+                        map[other] = current.filter((item) => item !== value);
+                    }
+                }
+            }
+            this.saveSettings();
+            Input.configure(this.settings);
+        }
+        this.renderMapping();
+    },
+
+    renderMapping() {
+        const list = document.getElementById('mapping-list');
+        if (!list) {
+            return;
+        }
+        list.innerHTML = '';
+        for (const action of Input.actions) {
+            const row = document.createElement('div');
+            row.className = 'map-row';
+            const keys = Input.keyBindings[action] || [];
+            const pads = Input.padBindings[action] || [];
+            row.innerHTML = `<span class="map-name"></span>
+                <button type="button" class="map-btn" data-action="map-key" data-id="${action}"><i>⌨️</i><span></span></button>
+                <button type="button" class="map-btn" data-action="map-pad" data-id="${action}"><i>🎮</i><span></span></button>`;
+            row.querySelector('.map-name').textContent = Input.actionNames[action];
+            const [keyLabel, padLabel] = row.querySelectorAll('.map-btn span');
+            keyLabel.textContent = keys.length ? keys.map((k) => Input.keyLabel(k)).join(' / ') : '—';
+            padLabel.textContent = pads.length ? pads.map((b) => Input.padLabel(b)).join(' / ') : '—';
+            list.appendChild(row);
+        }
+        const pads = Input.connectedPads();
+        document.getElementById('pad-status').textContent = pads.length
+            ? '🎮 Conectado: ' + pads.map((pad) => pad.id.split('(')[0].trim()).join(', ')
+            : 'Ningún mando detectado. Conéctalo por Bluetooth o USB y pulsa un botón para que el navegador lo reconozca.';
+    },
+
+    renderSkins() {
+        const container = document.getElementById('skin-list');
+        container.innerHTML = '';
+        for (const skin of this.skins) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'skin' + (this.settings.skin === skin.id ? ' active' : '') + (skin.clear ? ' clear' : '');
+            button.dataset.action = 'skin';
+            button.dataset.id = skin.id;
+            button.innerHTML = `<span class="skin-preview" data-skin="${skin.id}"><i class="sp-screen"></i><i class="sp-dpad"></i><i class="sp-a"></i><i class="sp-b"></i></span><span class="name"></span>`;
+            button.querySelector('.name').textContent = skin.name;
+            container.appendChild(button);
+        }
+        document.getElementById('frame-toggle').checked = !!this.settings.frame;
     },
 
     isPaused() {
@@ -671,6 +860,8 @@ const App = {
             states: () => this.renderStates(),
             palette: () => this.renderPalettes(),
             settings: () => this.renderSettings(),
+            mapping: () => this.renderMapping(),
+            skin: () => this.renderSkins(),
             about: () => this.renderAbout(),
         }[page];
         if (render) {
@@ -1038,53 +1229,42 @@ const App = {
             }
         });
 
-        // Keyboard.
+        // Keyboard (bindings are configurable in "Mando y teclado").
         document.addEventListener('keydown', (ev) => {
-            if (ev.target.matches && ev.target.matches('input, select, textarea')) {
-                return;
-            }
-            if (ev.code === 'Escape') {
-                if (Controls.editing) {
-                    this.stopLayoutEditor();
-                } else if (this.menuOpen) {
-                    this.closeMenu();
-                } else {
-                    this.openMenu();
+            if (this.capture) {
+                ev.preventDefault();
+                if (this.capture.type === 'key' && !ev.repeat) {
+                    this.finishCapture(ev.code === 'Escape' ? null : ev.code, ev.code === 'Delete');
                 }
                 return;
             }
-            if (this.menuOpen) {
+            if (ev.target.matches && ev.target.matches('input, select, textarea')) {
                 return;
             }
-            if (ev.code === 'F2') {
-                ev.preventDefault();
-                this.saveState('1');
+            const actions = [...Input.actionsForKey(ev.code)];
+            if (ev.code === 'Escape' && !actions.includes('menu')) {
+                actions.push('menu');
+            }
+            if (!actions.length) {
                 return;
             }
-            if (ev.code === 'F4') {
-                ev.preventDefault();
-                this.loadState('1');
+            ev.preventDefault();
+            if (ev.repeat) {
                 return;
             }
-            if (ev.code === 'Space') {
-                Input.turboKey = true;
-                ev.preventDefault();
-                return;
+            this.unlockAudio();
+            for (const action of actions) {
+                if (Input.buttons.includes(action) || action === 'turbo') {
+                    if (!this.menuOpen) {
+                        Input.keys[action] = true;
+                    }
+                }
             }
-            const button = Input.keyMap[ev.code];
-            if (button) {
-                Input.keys[button] = true;
-                ev.preventDefault();
-                this.unlockAudio();
-            }
+            this.handleActions(actions, 'key');
         });
         document.addEventListener('keyup', (ev) => {
-            if (ev.code === 'Space') {
-                Input.turboKey = false;
-            }
-            const button = Input.keyMap[ev.code];
-            if (button) {
-                Input.keys[button] = false;
+            for (const action of Input.actionsForKey(ev.code)) {
+                Input.keys[action] = false;
             }
         });
 
@@ -1156,6 +1336,21 @@ const App = {
             });
         }
 
+        document.getElementById('frame-toggle').addEventListener('change', (ev) => {
+            this.settings.frame = ev.target.checked;
+            this.saveSettings();
+            this.applySettings();
+        });
+        addEventListener('gamepaddisconnected', () => {
+            if (this.page === 'mapping') {
+                this.renderMapping();
+            }
+        });
+        addEventListener('gamepadconnected', () => {
+            if (this.page === 'mapping') {
+                this.renderMapping();
+            }
+        });
         addEventListener('gamepadconnected', (ev) => this.toast('🎮 Mando conectado: ' + ev.gamepad.id.split('(')[0].trim()));
     },
 
@@ -1206,6 +1401,36 @@ const App = {
                         this.closeMenu();
                     }
                 }
+                break;
+            case 'skin':
+                this.settings.skin = target.dataset.id;
+                this.saveSettings();
+                this.applySettings();
+                this.renderSkins();
+                break;
+            case 'map-key':
+                this.startCapture(target.dataset.id, 'key');
+                break;
+            case 'map-pad':
+                this.startCapture(target.dataset.id, 'pad');
+                break;
+            case 'map-cancel':
+                if (this.capture) {
+                    this.finishCapture(null);
+                }
+                break;
+            case 'map-clear':
+                if (this.capture) {
+                    this.finishCapture(null, true);
+                }
+                break;
+            case 'map-reset':
+                this.settings.keyMap = {};
+                this.settings.padMap = {};
+                this.saveSettings();
+                Input.configure(this.settings);
+                this.renderMapping();
+                this.toast('Controles restablecidos');
                 break;
             case 'play-homebrew':
                 if (await this.playHomebrew(target.dataset.id)) {
