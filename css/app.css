@@ -184,7 +184,7 @@ body {
     display: block;
 }
 
-.ctrl-dpad .well path {
+.ctrl-dpad .well {
     fill: var(--well);
     stroke: var(--well);
     stroke-width: 9;
@@ -193,69 +193,68 @@ body {
     opacity: .7;
 }
 
-.ctrl-dpad .dp {
-    position: absolute;
-    background-image: linear-gradient(180deg,
-        color-mix(in srgb, var(--dpad), #fff 10%) 0%,
-        var(--dpad) 50%,
-        color-mix(in srgb, var(--dpad), #000 18%) 100%);
-    background-repeat: no-repeat;
-    /* Thickness of the cross, seen below each piece. */
-    box-shadow: 0 calc(var(--dp) * .04) 0 var(--dpad-side);
-    transition: transform .05s ease-out, box-shadow .05s;
+/* Side wall (thickness): copies of the cross swept along the wall vector.
+   At rest it shows below the cross; pressing a direction lowers that side
+   and exposes the wall on the opposite, raised side. */
+.ctrl-dpad {
+    --wx: 0px;
+    --wy: 4px;
 }
 
-.ctrl-dpad .dp-up { border-radius: calc(var(--dp) * .045) calc(var(--dp) * .045) 0 0; transform-origin: 50% 94%; z-index: 1; }
-.ctrl-dpad .dp-left { border-radius: calc(var(--dp) * .045) 0 0 calc(var(--dp) * .045); transform-origin: 94% 50%; z-index: 1; }
-.ctrl-dpad .dp-right { border-radius: 0 calc(var(--dp) * .045) calc(var(--dp) * .045) 0; transform-origin: 6% 50%; z-index: 1; }
-.ctrl-dpad .dp-center { z-index: 2; box-shadow: none; }
-.ctrl-dpad .dp-down { border-radius: 0 0 calc(var(--dp) * .045) calc(var(--dp) * .045); transform-origin: 50% 6%; z-index: 3; }
+.ctrl-dpad.p-up { --wx: 0px; --wy: 7.5px; }
+.ctrl-dpad.p-down { --wx: 0px; --wy: -3.5px; }
+.ctrl-dpad.p-left { --wx: 3.5px; --wy: 4px; }
+.ctrl-dpad.p-right { --wx: -3.5px; --wy: 4px; }
+.ctrl-dpad.p-up.p-left { --wx: 3px; --wy: 6.5px; }
+.ctrl-dpad.p-up.p-right { --wx: -3px; --wy: 6.5px; }
+.ctrl-dpad.p-down.p-left { --wx: 3px; --wy: -2.5px; }
+.ctrl-dpad.p-down.p-right { --wx: -3px; --wy: -2.5px; }
 
-/* Concave dimple in the middle */
-.ctrl-dpad .dp-center::after {
-    content: "";
-    position: absolute;
-    left: 17%;
-    top: 17%;
-    width: 66%;
-    height: 66%;
-    border-radius: 50%;
-    background: linear-gradient(180deg, rgba(0, 0, 0, .38), rgba(255, 255, 255, .1));
+.ctrl-dpad .wall path {
+    fill: var(--dpad-side);
+    stroke: var(--dpad-side);
+    stroke-width: 6;
+    stroke-linejoin: round;
+    transform: translate(calc(var(--wx) * var(--t)), calc(var(--wy) * var(--t)));
+    transition: transform .04s ease-out;
 }
 
-/* Shade that darkens a pressed arm toward its tip */
-.ctrl-dpad .dp::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
+.ctrl-dpad .face,
+.ctrl-dpad .tilt path {
+    stroke-width: 6;
+    stroke-linejoin: round;
+}
+
+.ctrl-dpad .face {
+    fill: url(#dpad-face);
+    stroke: url(#dpad-face);
+}
+
+.ctrl-dpad .face-hi { stop-color: color-mix(in srgb, var(--dpad), #fff 10%); }
+.ctrl-dpad .face-mid { stop-color: var(--dpad); }
+.ctrl-dpad .face-lo { stop-color: color-mix(in srgb, var(--dpad), #000 16%); }
+
+/* The lowered side of the face catches less light. */
+.ctrl-dpad .tilt {
     opacity: 0;
-    transition: opacity .05s;
+    transition: opacity .04s;
 }
 
-.ctrl-dpad .dp-up::before { background: linear-gradient(0deg, rgba(0, 0, 0, .05), rgba(0, 0, 0, .45)); }
-.ctrl-dpad .dp-down::before { background: linear-gradient(180deg, rgba(0, 0, 0, .05), rgba(0, 0, 0, .45)); }
-.ctrl-dpad .dp-left::before { background: linear-gradient(90deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .05)); }
-.ctrl-dpad .dp-right::before { background: linear-gradient(270deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .05)); }
-
-/* Only the pressed arm tilts into the case, hinged on the center. */
-.ctrl-dpad.p-up .dp-up { transform: perspective(calc(var(--dp) * 1.6)) rotateX(26deg); }
-.ctrl-dpad.p-down .dp-down { transform: perspective(calc(var(--dp) * 1.6)) rotateX(-26deg); }
-.ctrl-dpad.p-left .dp-left { transform: perspective(calc(var(--dp) * 1.6)) rotateY(-26deg); }
-.ctrl-dpad.p-right .dp-right { transform: perspective(calc(var(--dp) * 1.6)) rotateY(26deg); }
-
-.ctrl-dpad.p-up .dp-up::before,
-.ctrl-dpad.p-down .dp-down::before,
-.ctrl-dpad.p-left .dp-left::before,
-.ctrl-dpad.p-right .dp-right::before {
-    opacity: 1;
+/* Solid shape (no fill/stroke overlap) faded by a gradient mask. */
+.ctrl-dpad .tilt path {
+    fill: #000;
+    stroke: #000;
 }
 
-.ctrl-dpad.p-up .dp-up,
-.ctrl-dpad.p-down .dp-down,
-.ctrl-dpad.p-left .dp-left,
-.ctrl-dpad.p-right .dp-right {
-    box-shadow: 0 calc(var(--dp) * .015) 0 var(--dpad-side);
+.ctrl-dpad.p-up .tilt-up,
+.ctrl-dpad.p-down .tilt-down,
+.ctrl-dpad.p-left .tilt-left,
+.ctrl-dpad.p-right .tilt-right {
+    opacity: .3;
+}
+
+.ctrl-dpad .dimple {
+    fill: url(#dpad-dimple);
 }
 
 /* ---- A / B: matte convex buttons inside a slanted oval recess ---- */

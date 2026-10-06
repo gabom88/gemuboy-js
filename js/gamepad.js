@@ -196,24 +196,40 @@ const Controls = {
             el.className = 'ctrl ctrl-' + id;
             el.dataset.id = id;
             if (id === 'dpad') {
-                // A fixed center and four arms, each a real 3D piece hinged where it meets
-                // the center: the pressed arm tilts into the case with perspective while
-                // the center and the other arms stay put.
+                // One rigid cross with thickness. The top face stays put; the extruded side
+                // wall shows on the side that rises when a direction is pressed.
                 const cross = 'M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z';
-                // [left, top, width, height] in % of the d-pad box.
-                const pieces = {
-                    up: [37, 4, 26, 35], left: [4, 37, 35, 26], right: [61, 37, 35, 26],
-                    center: [37, 37, 26, 26], down: [37, 61, 26, 35],
-                };
-                const html = Object.entries(pieces).map(([name, [x, y, w, h]]) => {
-                    // One vertical gradient spanning the whole d-pad, so the joins don't show.
-                    const size = 10000 / h;
-                    const pos = h < 100 ? (y / (100 - h)) * 100 : 0;
-                    const style = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;` +
-                        `background-size:100% ${size}%;background-position:0 ${pos}%`;
-                    return `<div class="dp dp-${name}" style="${style}"></div>`;
-                }).join('');
-                el.innerHTML = `<svg class="well" viewBox="0 0 100 100" aria-hidden="true"><path d="${cross}"/></svg>${html}`;
+                const steps = [1, 0.8, 0.6, 0.4, 0.2];
+                const wall = steps.map((t) => `<path d="${cross}" style="--t:${t}"/>`).join('');
+                el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="dpad-face" gradientUnits="userSpaceOnUse" x1="0" y1="3" x2="0" y2="97">
+                            <stop class="face-hi" offset="0"/>
+                            <stop class="face-mid" offset=".5"/>
+                            <stop class="face-lo" offset="1"/>
+                        </linearGradient>
+                        <linearGradient id="dpad-dimple" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0" stop-color="#000" stop-opacity=".38"/>
+                            <stop offset="1" stop-color="#fff" stop-opacity=".1"/>
+                        </linearGradient>
+                        <linearGradient id="tg-up" gradientUnits="userSpaceOnUse" x1="0" y1="3" x2="0" y2="60"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+                        <mask id="tm-up" maskUnits="userSpaceOnUse" x="-5" y="-5" width="110" height="110"><rect x="-5" y="-5" width="110" height="110" fill="url(#tg-up)"/></mask>
+                        <linearGradient id="tg-down" gradientUnits="userSpaceOnUse" x1="0" y1="97" x2="0" y2="40"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+                        <mask id="tm-down" maskUnits="userSpaceOnUse" x="-5" y="-5" width="110" height="110"><rect x="-5" y="-5" width="110" height="110" fill="url(#tg-down)"/></mask>
+                        <linearGradient id="tg-left" gradientUnits="userSpaceOnUse" x1="3" y1="0" x2="60" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+                        <mask id="tm-left" maskUnits="userSpaceOnUse" x="-5" y="-5" width="110" height="110"><rect x="-5" y="-5" width="110" height="110" fill="url(#tg-left)"/></mask>
+                        <linearGradient id="tg-right" gradientUnits="userSpaceOnUse" x1="97" y1="0" x2="40" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+                        <mask id="tm-right" maskUnits="userSpaceOnUse" x="-5" y="-5" width="110" height="110"><rect x="-5" y="-5" width="110" height="110" fill="url(#tg-right)"/></mask>
+                    </defs>
+                    <path class="well" d="${cross}"/>
+                    <g class="wall">${wall}</g>
+                    <path class="face" d="${cross}"/>
+                    <g class="tilt tilt-up" mask="url(#tm-up)"><path d="${cross}"/></g>
+                    <g class="tilt tilt-down" mask="url(#tm-down)"><path d="${cross}"/></g>
+                    <g class="tilt tilt-left" mask="url(#tm-left)"><path d="${cross}"/></g>
+                    <g class="tilt tilt-right" mask="url(#tm-right)"><path d="${cross}"/></g>
+                    <circle class="dimple" cx="50" cy="50" r="8.5"/>
+                </svg>`;
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
@@ -317,7 +333,6 @@ const Controls = {
             const cy = Math.min(Math.max(c.y * H, minY), Math.max(minY, maxY));
             const show = c.visible && (id === 'menu' || this.visibleTouch);
             el.style.width = w + 'px';
-            el.style.setProperty('--dp', w + 'px');
             el.style.height = h + 'px';
             el.style.transform = `translate(${cx - w / 2}px, ${cy - h / 2}px)`;
             el.style.fontSize = (id === 'start' || id === 'select' ? h * 0.36 : h * 0.4) + 'px';
