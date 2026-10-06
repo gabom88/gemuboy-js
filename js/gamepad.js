@@ -196,32 +196,50 @@ const Controls = {
             el.className = 'ctrl ctrl-' + id;
             el.dataset.id = id;
             if (id === 'dpad') {
-                // Recess in the body + the cross itself, which tilts toward the pressed side.
+                // Five pieces: a fixed center and four arms. Only the pressed arm sinks
+                // (foreshortens toward the center and darkens toward its tip).
                 const cross = 'M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z';
+                const arms = {
+                    up: { d: 'M37 6 H63 V41 H37 Z', origin: '50px 40px', sink: [50, 40, 50, 4] },
+                    down: { d: 'M37 59 H63 V94 H37 Z', origin: '50px 60px', sink: [50, 60, 50, 96] },
+                    left: { d: 'M6 37 H41 V63 H6 Z', origin: '40px 50px', sink: [40, 50, 4, 50] },
+                    right: { d: 'M59 37 H94 V63 H59 Z', origin: '60px 50px', sink: [60, 50, 96, 50] },
+                };
+                const order = ['up', 'left', 'right', 'down'];
+                const gradients = order.map((dir) => {
+                    const [x1, y1, x2, y2] = arms[dir].sink;
+                    return `<linearGradient id="sink-${dir}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
+                        <stop offset="0" stop-color="#000" stop-opacity=".05"/>
+                        <stop offset="1" stop-color="#000" stop-opacity=".42"/>
+                    </linearGradient>`;
+                }).join('');
+                const tops = order.map((dir) => `
+                    <g class="arm arm-${dir}" style="transform-origin:${arms[dir].origin}">
+                        <path class="side" d="${arms[dir].d}" transform="translate(0 4)"/>
+                        <path class="top" d="${arms[dir].d}"/>
+                        ${this.shadeRect(arms[dir].d, dir)}
+                    </g>`).join('');
                 el.innerHTML = `
                     <svg class="well" viewBox="0 0 100 100" aria-hidden="true"><path d="${cross}"/></svg>
-                    <div class="tilt"><svg viewBox="0 0 100 100" aria-hidden="true">
+                    <svg class="pad" viewBox="0 0 100 100" aria-hidden="true">
                         <defs>
-                            <linearGradient id="dpad-top" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0" stop-color="#fff" stop-opacity=".09"/>
-                                <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
-                                <stop offset="1" stop-color="#000" stop-opacity=".14"/>
+                            <linearGradient id="dpad-face" gradientUnits="userSpaceOnUse" x1="0" y1="3" x2="0" y2="97">
+                                <stop class="face-hi" offset="0"/>
+                                <stop class="face-mid" offset=".5"/>
+                                <stop class="face-lo" offset="1"/>
                             </linearGradient>
                             <linearGradient id="dpad-dimple" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0" stop-color="#000" stop-opacity=".38"/>
                                 <stop offset="1" stop-color="#fff" stop-opacity=".1"/>
                             </linearGradient>
+                            ${gradients}
                         </defs>
-                        <path class="side" d="${cross}" transform="translate(0 4)"/>
-                        <path class="top" d="${cross}"/>
-                        <path class="sheen" d="${cross}"/>
-                        <rect class="arm arm-up" x="37" y="6" width="26" height="31"/>
-                        <rect class="arm arm-down" x="37" y="63" width="26" height="31"/>
-                        <rect class="arm arm-left" x="6" y="37" width="31" height="26"/>
-                        <rect class="arm arm-right" x="63" y="37" width="31" height="26"/>
-                        <path class="rim" d="${cross}"/>
+                        ${tops}
+                        <g class="center">
+                            <path class="top" d="M37 37 H63 V63 H37 Z"/>
+                        </g>
                         <circle class="dimple" cx="50" cy="50" r="8.5"/>
-                    </svg></div>`;
+                    </svg>`;
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
@@ -339,6 +357,15 @@ const Controls = {
         }
         this.renderAbWell(layout, globalOpacity);
         this.layer.classList.toggle('editing', this.editing);
+    },
+
+    // The arm paths are stroked 6 wide with round joins, i.e. a rect grown by 3
+    // with 3-unit rounded corners; the shade covers that same footprint in one shape.
+    shadeRect(d, dir) {
+        const [x1, y1, x2, y2] = d.match(/[\d.]+/g).map(Number).slice(0, 4); // M x1 y1 H x2 V y2
+        const left = Math.min(x1, x2) - 3;
+        const top = Math.min(y1, y2) - 3;
+        return `<rect class="shade" x="${left}" y="${top}" width="${Math.abs(x2 - x1) + 6}" height="${Math.abs(y2 - y1) + 6}" rx="3" fill="url(#sink-${dir})"/>`;
     },
 
     renderAbWell(layout, globalOpacity) {

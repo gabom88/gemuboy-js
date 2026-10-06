@@ -193,35 +193,8 @@ body {
     opacity: .7;
 }
 
-.ctrl-dpad .tilt {
-    position: absolute;
-    inset: 0;
-    --rx: 0deg;
-    --ry: 0deg;
-    /* Hinged on the edge opposite to the pressed direction: only the pressed
-       side sinks, the opposite arm stays where it is (no seesaw). */
-    --ox: 50%;
-    --oy: 50%;
-    transform-origin: var(--ox) var(--oy);
-    transform: perspective(300px) rotateX(var(--rx)) rotateY(var(--ry));
-    transition: transform .04s ease-out;
-}
-
-.ctrl-dpad.p-up .tilt { --rx: 9deg; --oy: 100%; }
-.ctrl-dpad.p-down .tilt { --rx: -9deg; --oy: 0%; }
-.ctrl-dpad.p-left .tilt { --ry: -9deg; --ox: 100%; }
-.ctrl-dpad.p-right .tilt { --ry: 9deg; --ox: 0%; }
-
-/* Diagonals: a single rotation around the diagonal axis through the opposite corner. */
-.ctrl-dpad.p-up.p-left .tilt { transform: perspective(300px) rotate3d(1, -1, 0, 8deg); }
-.ctrl-dpad.p-up.p-right .tilt { transform: perspective(300px) rotate3d(1, 1, 0, 8deg); }
-.ctrl-dpad.p-down.p-left .tilt { transform: perspective(300px) rotate3d(1, 1, 0, -8deg); }
-.ctrl-dpad.p-down.p-right .tilt { transform: perspective(300px) rotate3d(-1, 1, 0, 8deg); }
-
 .ctrl-dpad .side,
-.ctrl-dpad .top,
-.ctrl-dpad .sheen,
-.ctrl-dpad .rim {
+.ctrl-dpad .top {
     stroke-width: 6;
     stroke-linejoin: round;
 }
@@ -232,37 +205,57 @@ body {
 }
 
 .ctrl-dpad .top {
-    fill: var(--dpad);
-    stroke: var(--dpad);
+    /* Opaque gradient shared by all pieces, so the joins are invisible. */
+    fill: url(#dpad-face);
+    stroke: url(#dpad-face);
 }
 
-.ctrl-dpad .sheen {
-    fill: url(#dpad-top);
-    stroke: none;
+.ctrl-dpad .face-hi { stop-color: color-mix(in srgb, var(--dpad), #fff 9%); }
+.ctrl-dpad .face-mid { stop-color: var(--dpad); }
+.ctrl-dpad .face-lo { stop-color: color-mix(in srgb, var(--dpad), #000 16%); }
+
+.ctrl-dpad .shade {
+    opacity: 0;
+    transition: opacity .04s;
 }
 
-.ctrl-dpad .rim {
-    fill: none;
-    stroke: rgba(255, 255, 255, .07);
-    stroke-width: 1;
-    transform: translate(0, -.4px);
-}
-
+/* Only the pressed arm moves: it sinks, so it looks shorter from above and
+   darker toward its tip. The center and the other arms never move. */
 .ctrl-dpad .arm {
-    fill: transparent;
-    transition: fill .045s;
+    transition: transform .04s ease-out;
 }
 
-/* The pressed arm goes down into shadow. */
 .ctrl-dpad.p-up .arm-up,
-.ctrl-dpad.p-down .arm-down,
+.ctrl-dpad.p-down .arm-down {
+    transform: scaleY(.9);
+}
+
 .ctrl-dpad.p-left .arm-left,
 .ctrl-dpad.p-right .arm-right {
-    fill: rgba(0, 0, 0, .3);
+    transform: scaleX(.9);
+}
+
+.ctrl-dpad.p-up .arm-up .shade,
+.ctrl-dpad.p-down .arm-down .shade,
+.ctrl-dpad.p-left .arm-left .shade,
+.ctrl-dpad.p-right .arm-right .shade {
+    opacity: 1;
 }
 
 .ctrl-dpad .dimple {
     fill: url(#dpad-dimple);
+}
+
+/* A sunken arm shows less of its side wall. */
+.ctrl-dpad .side {
+    transition: opacity .04s;
+}
+
+.ctrl-dpad.p-up .arm-up .side,
+.ctrl-dpad.p-down .arm-down .side,
+.ctrl-dpad.p-left .arm-left .side,
+.ctrl-dpad.p-right .arm-right .side {
+    opacity: .45;
 }
 
 /* ---- A / B: matte convex buttons inside a slanted oval recess ---- */
