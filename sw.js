@@ -55,6 +55,10 @@ const ASSETS = [
     'static/homebrew/airaki.png',
     'static/homebrew/renegade-rush.png',
     'static/homebrew/postie.png',
+    'static/homebrew/super-jetpak-dx.png',
+    'static/homebrew/deadeus.png',
+    'static/homebrew/dmg-deals-damage.png',
+    'static/homebrew/the-bouncing-ball.png',
 ];
 
 self.addEventListener('install', (event) => {

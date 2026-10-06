@@ -26,3 +26,16 @@ El código fuente de cada juego está disponible en el enlace indicado.
 | Crystal Lake | VHVS | Zlib | https://www.becomingthebeast.com/vhvs/index.html |
 | Carazu | Martin Holtkamp | GPL-3.0 | https://github.com/mholtkamp/carazu |
 | Airaki | furrtek | GPL-3.0 | https://github.com/furrtek/Airaki |
+
+## Juegos gratuitos añadidos a petición
+
+Estos juegos son gratuitos, pero no tienen una licencia libre: se descargan gratis desde la web de
+sus autores, que conservan todos los derechos. Se incluyen sin modificaciones y con un enlace a su
+página.
+
+| Juego | Autor | Condiciones | Web |
+| --- | --- | --- | --- |
+| Super JetPak DX | Asobitech (Quang Nguyen) | Descarga gratuita | https://asobitech.itch.io/super-jetpak-dx |
+| Deadeus (Regular Edition) | IZMA | Descarga gratuita | https://incube8games.com/blogs/games/deadeus-gb |
+| DMG Deals Damage | Dr. Ludos | Descarga gratuita | https://drludos.itch.io/dmg-deals-damage |
+| The Bouncing Ball | Cabbage (basado en un juego de Raon Games) | Freeware, «not for sale» (GBJAM 4) | https://pdroms.de/files/nintendo-game-boy-gb-gbc/the-bouncing-ball |
