@@ -1951,22 +1951,6 @@ input[type="search"]:focus {
     display: none;
 }
 
-.lib-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 6px 0 8px;
-}
-
-.lib-top .note {
-    margin: 0;
-}
-
-.lib-top .btn {
-    flex: none;
-}
-
 .cover {
     position: relative;
     flex: none;
@@ -2374,4 +2358,51 @@ a.btn.block[hidden],
 
 .card.txt-list .desc[hidden] {
     display: none;
+}
+
+/* Library buttons: [Importar lista] [Añadir ROM] */
+.lib-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0 0;
+}
+
+.lib-buttons + .btn.block {
+    margin-top: 8px;
+}
+
+/* Yellow button with a light sweep */
+.btn.shine {
+    position: relative;
+    overflow: hidden;
+    background: #ffd60a;
+    border-color: #ffd60a;
+    color: #000;
+    isolation: isolate;
+}
+
+.btn.shine::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -60%;
+    width: 40%;
+    z-index: -1;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .85), transparent);
+    transform: skewX(-20deg);
+    animation: shine 2.8s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0% { left: -60%; }
+    45%, 100% { left: 130%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn.shine::after {
+        animation: none;
+        display: none;
+    }
 }

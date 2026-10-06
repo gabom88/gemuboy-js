@@ -280,27 +280,6 @@ const Library = {
         return { added, updated };
     },
 
-    exportText() {
-        const lines = [
-            '# Biblioteca de GBoy-JS · ' + new Date().toLocaleString('es'),
-            '#campos: ' + this.exportOrder.map((field) => this.exportLabels[field]).join(' | '),
-        ];
-        let skipped = 0;
-        for (const entry of this.list()) {
-            if (!entry.url) {
-                skipped++;
-                continue;
-            }
-            const absolute = (url) => (url ? new URL(url, location.href).href : '');
-            const values = Object.assign({}, entry, { url: absolute(entry.url), image: entry.image ? absolute(entry.image) : '' });
-            lines.push(this.exportOrder.map((field) => String(values[field] || '').replace(/[|\r\n\t]+/g, ' ').trim()).join(' | '));
-        }
-        if (skipped) {
-            lines.splice(2, 0, `# ${skipped} juego(s) cargados desde archivos locales no tienen URL y no se incluyen.`);
-        }
-        return lines.join('\n') + '\n';
-    },
-
     // Earlier versions bundled the homebrew ROMs in static/homebrew; they now come
     // from the "homebrew.txt" list, which downloads them from GitHub.
     homebrewRoms: 'https://raw.githubusercontent.com/gabom88/gemuboy-js/4c6fec829d08c2729ec447ce08c138afa24c1db2/static/homebrew/',
@@ -318,6 +297,54 @@ const Library = {
         if (changed) {
             this.save(list);
         }
+    },
+
+    // The demo ROM bundled with the app is the only game in a new library.
+    seedDemo() {
+        if (Store.getJSON('demoSeeded', false)) {
+            return;
+        }
+        const list = this.list();
+        if (!list.some((entry) => entry.url === 'static/pocket.gb')) {
+            list.push({
+                id: 'demo-pocket',
+                url: 'static/pocket.gb',
+                image: 'static/pocket.png',
+                title: 'Is That a Demo in Your Pocket?',
+                description: 'Demo para Game Boy incluida con GBoy-JS: pruébala para ver el emulador en acción, también sin conexión.',
+                genre: 'Demo',
+                collection: 'Demo',
+                added: Date.now(),
+            });
+            this.save(list);
+        }
+        Store.setJSON('demoSeeded', true);
+    },
+
+    // "Importar lista": imports static/txt/games.txt straight away.
+    async importGamesList() {
+        let text;
+        try {
+            const response = await fetch('static/txt/games.txt', { cache: 'no-cache' });
+            if (!response.ok) {
+                throw new Error(String(response.status));
+            }
+            text = await response.text();
+        } catch (error) {
+            this.app.toast('⚠️ No se pudo leer la lista games.txt', 4000);
+            return null;
+        }
+        const parsed = this.parse(text);
+        if (!parsed.entries.length) {
+            this.app.toast('La lista games.txt todavía no tiene juegos', 3000);
+            return null;
+        }
+        const result = this.apply(parsed);
+        if (result) {
+            this.app.toast(`Lista importada: ${result.added} nuevos, ${result.updated} actualizados` +
+                (parsed.errors.length ? ` · ${parsed.errors.length} líneas con errores` : ''), 4000);
+        }
+        return result;
     },
 
     // --------------------------------------------------- lists in static/txt
@@ -627,37 +654,6 @@ const Library = {
         }
     },
 
-    async downloadAll(ids) {
-        if (this.bulk) {
-            this.bulk.cancel = true;
-            return;
-        }
-        const pending = ids.filter((id) => {
-            const entry = this.find(id);
-            return entry && entry.url && !this.isDownloaded(entry);
-        });
-        if (!pending.length) {
-            this.app.toast('Todos los juegos visibles ya están descargados');
-            return;
-        }
-        this.bulk = { cancel: false };
-        this.renderBulkButton();
-        let ok = 0;
-        let failed = 0;
-        for (let i = 0; i < pending.length && !this.bulk.cancel; i++) {
-            this.app.toast(`Descargando ${i + 1} de ${pending.length}…`, 60000);
-            if (await this.download(pending[i])) {
-                ok++;
-            } else {
-                failed++;
-            }
-        }
-        const cancelled = this.bulk.cancel;
-        this.bulk = null;
-        this.renderBulkButton();
-        this.app.toast(`${cancelled ? 'Descarga detenida. ' : ''}${ok} descargado(s)${failed ? ` · ${failed} con error` : ''}`, 4000);
-    },
-
     // Removes every entry with its downloaded ROM, cover and save states. Cartridge
     // saves (.sav) are kept, as when deleting a single game.
     async clearAll() {
@@ -796,14 +792,13 @@ const Library = {
         document.getElementById('lib-view').innerHTML = grid ? this.app.icons.list : this.app.icons.grid;
         const all = this.list();
         const list = this.filtered();
-        this.visibleIds = list.map((e) => e.id);
         const downloaded = all.filter((e) => this.isDownloaded(e)).length;
         document.getElementById('lib-count').textContent = all.length
             ? `${list.length === all.length ? all.length + ' juegos' : list.length + ' de ' + all.length + ' juegos'} · ${downloaded} descargados`
             : '';
         container.innerHTML = '';
         if (!list.length) {
-            container.innerHTML = `<p class="empty">${all.length ? 'Ningún juego coincide con la búsqueda.' : 'La biblioteca está vacía. Carga un ROM o importa una lista con «Importar lista TXT» (incluye una lista de juegos homebrew gratuitos).'}</p>`;
+            container.innerHTML = `<p class="empty">${all.length ? 'Ningún juego coincide con la búsqueda.' : 'La biblioteca está vacía. Usa «Añadir ROM», «Importar lista» o «Listas TXT».'}</p>`;
         }
         for (const entry of list.slice(0, this.view.limit)) {
             container.appendChild(this.card(entry, grid));
@@ -811,7 +806,6 @@ const Library = {
         const more = document.getElementById('lib-more');
         more.hidden = list.length <= this.view.limit;
         more.textContent = `Mostrar más (${list.length - this.view.limit})`;
-        this.renderBulkButton();
     },
 
     card(entry, grid) {
@@ -902,13 +896,6 @@ const Library = {
         document.querySelectorAll(`[data-entry="${CSS.escape(id)}"]`).forEach((card) => this.updateCardStatus(card, entry));
         if (this.app.page === 'entry' && this.editingId === id) {
             this.renderEntryStatus(entry);
-        }
-    },
-
-    renderBulkButton() {
-        const button = document.getElementById('lib-download-all');
-        if (button) {
-            button.textContent = this.bulk ? 'Detener descargas' : 'Descargar todos los visibles';
         }
     },
 
