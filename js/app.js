@@ -1941,6 +1941,20 @@ const App = {
             case 'lib-export':
                 this.exportLibrary();
                 break;
+            case 'lib-clear': {
+                const count = this.library().length;
+                if (!count) {
+                    this.toast('La biblioteca ya está vacía');
+                } else if (confirm(`¿Eliminar TODA la biblioteca (${count} juegos) con sus ROMs descargados, portadas y estados guardados?\n\nLas partidas guardadas del cartucho (.sav) se conservan. No se puede deshacer: si quieres conservarla, expórtala antes.`)) {
+                    const removed = await Library.clearAll();
+                    if (this.game) {
+                        this.game.entryId = null;
+                    }
+                    Library.render();
+                    this.toast(`Biblioteca eliminada (${removed} juegos)`, 3000);
+                }
+                break;
+            }
             case 'import-file':
                 this.el.txtInput.click();
                 break;

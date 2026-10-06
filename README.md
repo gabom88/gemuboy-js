@@ -92,6 +92,8 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   - **Portadas y capturas**: el botón de cámara del menú usa la pantalla actual como portada del juego o
     la guarda como PNG; también puedes usar la miniatura de un estado guardado.
   - Carga de `.gb`, `.gbc` y `.zip` desde el dispositivo.
+  - **Eliminar toda la biblioteca** (ROMs, portadas y estados; las partidas `.sav` se conservan). Los juegos
+    homebrew incluidos se pueden restaurar desde *Importar lista TXT*.
 - 🎮 **Mandos Bluetooth/USB y teclado configurables**: asigna cada botón (A, B, Start, Select, cruceta,
   turbo, menú y guardar/cargar estado) a la tecla o al botón del mando que quieras. Funciona con mandos
   Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.

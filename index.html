@@ -201,11 +201,35 @@
                     <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
                         caben, en IndexedDB). Los juegos importados de una lista se descargan la primera vez que los
                         juegas y después funcionan sin conexión.</p>
+                    <button type="button" class="btn danger block" data-action="lib-clear">Eliminar toda la biblioteca</button>
                 </section>
 
                 <section class="page" data-page="import" data-title="Importar lista TXT">
                     <p class="note">Un juego por línea, con los campos separados por <code>|</code>:</p>
                     <pre class="format">nombre | url | descripción | año | género | portada</pre>
+                    <details class="help">
+                        <summary><span class="note">Funciona con enlaces <strong>RAW de GitHub</strong>, no con cualquier
+                            URL.</span><span class="help-btn" aria-label="Ver enlaces permitidos">?</span></summary>
+                        <div class="help-body">
+                            <p><strong>Enlaces que funcionan</strong></p>
+                            <ul>
+                                <li><code>https://raw.githubusercontent.com/usuario/repo/rama/juego.gb</code></li>
+                                <li>La página del archivo en GitHub (<code>github.com/usuario/repo/blob/rama/…</code>): se
+                                    convierte sola a RAW.</li>
+                                <li><code>https://cdn.jsdelivr.net/gh/usuario/repo@rama/juego.gb</code></li>
+                                <li>Servidores propios con HTTPS y la cabecera <code>Access-Control-Allow-Origin</code>.</li>
+                            </ul>
+                            <p><strong>No funcionan</strong>: itch.io, FTP, «Releases» de GitHub, páginas web y la mayoría
+                                de servidores (bloquean la descarga desde el navegador).</p>
+                            <p><strong>Cómo copiar el enlace RAW</strong>: abre el archivo en GitHub y copia el enlace del
+                                botón <em>Raw</em>. Para todos los de una carpeta abre
+                                <code>api.github.com/repos/usuario/repo/contents/carpeta?ref=rama</code> y copia los
+                                <code>download_url</code>.</p>
+                            <p>Formatos: <code>.gb</code>, <code>.gbc</code> y <code>.zip</code>. Si un enlace no se puede
+                                descargar, la ficha se crea igual: descarga el archivo tú mismo y usa <em>Asignar archivo</em>
+                                en la ficha (⋯).</p>
+                        </div>
+                    </details>
                     <p class="note">Solo el nombre y la URL son obligatorios (una línea con solo la URL también
                         vale). Se acepta <code>---</code> como separador y las celdas copiadas de Excel o Google
                         Sheets. Las líneas que empiezan por <code>#</code> son comentarios y

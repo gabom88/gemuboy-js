@@ -627,6 +627,34 @@ const Library = {
         this.app.toast(`${cancelled ? 'Descarga detenida. ' : ''}${ok} descargado(s)${failed ? ` · ${failed} con error` : ''}`, 4000);
     },
 
+    // Removes every entry with its downloaded ROM, cover and save states. Cartridge
+    // saves (.sav) are kept, as when deleting a single game.
+    async clearAll() {
+        const list = this.list();
+        const keys = [];
+        for (const entry of list) {
+            const romId = this.romId(entry);
+            keys.push('rom:' + entry.id, 'cover:' + entry.id);
+            for (const slot of this.app.stateSlots) {
+                keys.push(`state:${romId}:${slot}`, `thumb:${romId}:${slot}`, `statemeta:${romId}:${slot}`);
+            }
+        }
+        for (let i = 0; i < keys.length; i += 50) {
+            await Promise.all(keys.slice(i, i + 50).map((key) => Store.remove(key)));
+        }
+        this.save([]);
+        // The bundled homebrew games stay out until restored from "Importar lista TXT".
+        const seeded = new Set(Store.getJSON('hbseeded', []));
+        list.filter((e) => e.homebrew).forEach((e) => seeded.add(e.homebrew));
+        Store.setJSON('hbseeded', [...seeded]);
+        await Store.remove('last');
+        this.downloads.clear();
+        this.coverCache.clear();
+        this.view.filter = 'all';
+        this.view.query = '';
+        return list.length;
+    },
+
     // --------------------------------------------------------------- covers
     async setCover(id, dataUrl) {
         const where = await Store.put('cover:' + id, dataUrl).catch(() => null);
