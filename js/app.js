@@ -20,12 +20,13 @@ const App = {
         smoothing: false,
         showFps: false,
         autoState: true,
+        engine: 'sameboy',
         layouts: {},
     },
 
     stateSlots: ['auto', '1', '2', '3', '4'],
 
-    gb: null,
+    engine: null,
     game: null,
     cycles: 0,
     running: false,
@@ -119,11 +120,18 @@ const App = {
         this.layout();
     },
 
+    applyPalette() {
+        Palettes.apply(this.settings);
+        if (this.engine) {
+            this.engine.setPalette(this.settings);
+        }
+    },
+
     updateVolume() {
         const volume = this.settings.muted ? 0 : this.settings.volume / 100;
         Sound.volume = volume * 0.5;
-        if (this.gb) {
-            this.gb.sound.gainNode.gain.value = Sound.volume;
+        if (this.engine) {
+            this.engine.setVolume(Sound.volume);
         }
     },
 
@@ -219,7 +227,7 @@ const App = {
             this.pollCapture();
         } else {
             this.handleActions(justPressed, 'pad');
-            if (Input.pad.start && Input.pad.select && !this.menuOpen && this.gb) {
+            if (Input.pad.start && Input.pad.select && !this.menuOpen && this.engine) {
                 this.openMenu();
             }
         }
@@ -246,30 +254,21 @@ const App = {
         if (frames >= maxFrames) {
             this.accumulator = 0;
         }
-        if (this.gb.display.frameReady) {
-            this.gb.display.present();
-        }
+        this.engine.present();
+        this.engine.endFrames(speed);
         this.countFps(frames, now);
         this.periodicSave(now);
     },
 
     runFrame() {
-        const gb = this.gb;
-        Input.apply(gb.joypad);
-        if (gb.cartridge.hasRTC) {
-            gb.cartridge.rtc.updateTime();
-        }
         try {
-            while (this.cycles < Display.cpuCyclesPerFrame) {
-                this.cycles += gb.cycle();
-            }
+            this.engine.runFrame();
         } catch (error) {
             console.error(error);
             this.running = false;
             this.toast('Error de emulación: ' + error, 5000);
             return false;
         }
-        this.cycles -= Display.cpuCyclesPerFrame;
         return true;
     },
 
@@ -284,11 +283,11 @@ const App = {
                 } else {
                     this.openMenu();
                 }
-            } else if (!this.menuOpen && this.gb && action === 'save') {
+            } else if (!this.menuOpen && this.engine && action === 'save') {
                 this.saveState('1');
-            } else if (!this.menuOpen && this.gb && action === 'load') {
+            } else if (!this.menuOpen && this.engine && action === 'load') {
                 this.loadState('1');
-            } else if (source === 'pad' && this.menuOpen && action === 'start' && this.gb && this.page === 'main') {
+            } else if (source === 'pad' && this.menuOpen && action === 'start' && this.engine && this.page === 'main') {
                 this.closeMenu();
             }
         }
@@ -418,9 +417,9 @@ const App = {
 
     // Refresh the screen while paused (e.g. after changing the palette).
     redraw() {
-        if (this.gb && this.running) {
+        if (this.engine && this.running) {
             this.runFrame();
-            this.gb.display.present();
+            this.engine.present(true);
         }
     },
 
@@ -428,7 +427,7 @@ const App = {
     periodicSave(now) {
         if (!this.lastSramCheck || now - this.lastSramCheck > 1000) {
             this.lastSramCheck = now;
-            if (this.gb.cartridge.ramDirty) {
+            if (this.engine.batteryDirty()) {
                 this.saveSram();
             }
         }
@@ -444,19 +443,20 @@ const App = {
     },
 
     saveSram(quiet) {
-        const gb = this.gb;
-        if (!gb || !this.game || !gb.cartridge.hasSaveData) {
+        const engine = this.engine;
+        if (!engine || !this.game || !engine.hasSaveData()) {
             return;
         }
-        const cartridge = gb.cartridge;
-        cartridge.ramDirty = false;
         let ok = true;
-        if (cartridge.hasRAM && cartridge.ram) {
-            ok = Store.setSync('sram:' + this.game.id, Bytes.toBase64(cartridge.ram)) && ok;
+        const battery = engine.getBattery();
+        if (battery) {
+            ok = Store.setSync('sram:' + this.game.id, Bytes.toBase64(battery)) && ok;
         }
-        if (cartridge.hasRTC && cartridge.rtc) {
-            ok = Store.setJSON('rtc:' + this.game.id, cartridge.rtc) && ok;
+        const rtc = engine.getRtc();
+        if (rtc) {
+            ok = Store.setJSON('rtc:' + this.game.id, rtc) && ok;
         }
+        engine.markClean();
         if (!ok) {
             this.toast('⚠️ No se pudo guardar la partida: almacenamiento lleno', 4000);
             return;
@@ -466,9 +466,10 @@ const App = {
         }
     },
 
-    loadSram(gb, game) {
-        const cartridge = gb.cartridge;
-        if (!cartridge.hasSaveData) {
+    // Battery saves are shared by both engines: raw cartridge RAM (SameBoy appends
+    // the real-time clock in the standard .sav layout; the legacy core ignores it).
+    loadSram(engine, game) {
+        if (!engine.hasSaveData()) {
             return;
         }
         let ram = null;
@@ -476,7 +477,7 @@ const App = {
         if (stored) {
             ram = Bytes.fromBase64(stored);
         } else {
-            // Saves made by the previous version of the emulator.
+            // Saves made by the very first version of the emulator.
             try {
                 const legacy = localStorage.getItem(game.rawTitle);
                 if (legacy) {
@@ -484,22 +485,15 @@ const App = {
                 }
             } catch (ignored) { }
         }
-        if (ram && cartridge.ram) {
-            cartridge.ram.set(ram.subarray(0, cartridge.ram.length));
+        let rtc = Store.getJSON('rtc:' + game.id, null);
+        if (!rtc) {
+            try {
+                const legacy = localStorage.getItem(game.rawTitle + 'TIME');
+                rtc = legacy ? JSON.parse(legacy) : null;
+            } catch (ignored) { }
         }
-        if (cartridge.hasRTC) {
-            const rtc = Store.getJSON('rtc:' + game.id, null);
-            if (rtc) {
-                Object.assign(cartridge.rtc, rtc);
-            } else {
-                try {
-                    const legacy = localStorage.getItem(game.rawTitle + 'TIME');
-                    if (legacy) {
-                        Object.assign(cartridge.rtc, JSON.parse(legacy));
-                    }
-                } catch (ignored) { }
-            }
-        }
+        engine.setBattery(ram, rtc);
+        engine.markClean();
     },
 
     flashSaveIndicator() {
@@ -514,10 +508,10 @@ const App = {
     },
 
     async saveState(slot, { quiet = false, sync = false } = {}) {
-        if (!this.gb || !this.running) {
+        if (!this.engine || !this.running) {
             return false;
         }
-        const data = JSON.stringify({ time: Date.now(), state: SaveState.capture(this.gb) });
+        const data = JSON.stringify({ time: Date.now(), engine: this.engine.id, state: this.engine.captureState() });
         let thumb = null;
         try {
             thumb = this.el.canvas.toDataURL('image/png');
@@ -549,7 +543,7 @@ const App = {
     },
 
     async loadState(slot, { quiet = false } = {}) {
-        if (!this.gb) {
+        if (!this.engine) {
             return false;
         }
         const text = await Store.get(this.stateKey(slot));
@@ -561,17 +555,20 @@ const App = {
         }
         try {
             const { state } = JSON.parse(text);
-            SaveState.restore(this.gb, state);
-            this.cycles = 0;
+            this.engine.restoreState(state);
             this.redraw();
             if (!quiet) {
                 this.toast(slot === 'auto' ? 'Estado cargado' : `Estado ${slot} cargado`);
             }
             return true;
         } catch (error) {
-            console.error(error);
+            if (error.message !== 'engine-mismatch') {
+                console.error(error);
+            }
             if (!quiet) {
-                this.toast('⚠️ No se pudo cargar el estado', 4000);
+                this.toast(error.message === 'engine-mismatch'
+                    ? '⚠️ Este estado se guardó con el otro motor de emulación'
+                    : '⚠️ No se pudo cargar el estado', 4000);
             }
             return false;
         }
@@ -585,7 +582,7 @@ const App = {
 
     // Called whenever the app may be closed or killed (iOS kills background PWAs).
     persistNow() {
-        if (!this.gb || !this.running) {
+        if (!this.engine || !this.running) {
             return;
         }
         this.saveSram(true);
@@ -639,22 +636,18 @@ const App = {
         }
 
         this.stopGame();
-        const gb = new GameBoy();
-        try {
-            gb.cartridge.load(bytes);
-        } catch (error) {
-            console.error(error);
-            this.toast('No se pudo cargar el ROM: ' + error, 5000);
+        const engine = await this.createEngine(bytes);
+        if (!engine) {
             return false;
         }
-        this.gb = gb;
+        this.engine = engine;
         this.game = info;
         this.romBytes = bytes;
-        this.cycles = 0;
         this.accumulator = 0;
         this.lastAutoState = 0;
         this.turboToggled = false;
-        this.loadSram(gb, info);
+        this.loadSram(engine, info);
+        engine.setPalette(this.settings);
         this.updateVolume();
         this.running = true;
         Store.setSync('last', info.id);
@@ -671,6 +664,35 @@ const App = {
             this.touchLibrary(info.id);
         }
         return true;
+    },
+
+    // Creates the selected engine and loads the ROM. If SameBoy (WebAssembly) can't
+    // start, falls back to the legacy JavaScript core so the game still runs.
+    async createEngine(bytes) {
+        const order = this.settings.engine === 'legacy' ? ['legacy'] : ['sameboy', 'legacy'];
+        for (const id of order) {
+            const engine = Engines.create(id);
+            try {
+                await engine.load(bytes);
+                engine.onRumble = () => {
+                    if (this.settings.vibration && navigator.vibrate) {
+                        try {
+                            navigator.vibrate(80);
+                        } catch (ignored) { }
+                    }
+                };
+                if (id !== this.settings.engine && this.settings.engine !== 'legacy') {
+                    this.toast('SameBoy no está disponible: usando el motor ligero', 4000);
+                }
+                return engine;
+            } catch (error) {
+                console.error(id, error);
+                if (id === 'legacy') {
+                    this.toast('No se pudo cargar el ROM: ' + (error.message || error), 5000);
+                }
+            }
+        }
+        return null;
     },
 
     async storeRom(bytes, info) {
@@ -736,13 +758,29 @@ const App = {
     },
 
     stopGame() {
-        if (this.gb && this.running) {
+        if (this.engine && this.running) {
             this.persistNow();
         }
         this.running = false;
-        this.gb = null;
+        if (this.engine) {
+            this.engine.destroy();
+        }
+        this.engine = null;
         this.game = null;
         this.romBytes = null;
+    },
+
+    // Restarts the running game with the newly selected engine. The cartridge save
+    // is shared by both engines; save states belong to the engine that made them.
+    async switchEngine() {
+        const label = (Engines.list.find((e) => e.id === this.settings.engine) || {}).name || '';
+        if (!this.engine || !this.romBytes) {
+            this.toast('Motor: ' + label);
+            return;
+        }
+        if (await this.restartGame()) {
+            this.toast('Motor cambiado: ' + label, 3000);
+        }
     },
 
     // Restarts the current game from scratch (keeps the cartridge save).
@@ -751,7 +789,6 @@ const App = {
         const name = this.game.name;
         this.persistNow();
         this.running = false;
-        this.gb = null;
         return this.loadRom(bytes, { name, store: false });
     },
 
@@ -819,7 +856,7 @@ const App = {
         this.menuOpen = true;
         Controls.releaseAll();
         Input.releaseAll();
-        if (this.gb && this.running) {
+        if (this.engine && this.running) {
             this.saveSram(true);
         }
         this.el.menu.hidden = false;
@@ -827,7 +864,7 @@ const App = {
     },
 
     closeMenu() {
-        if (!this.gb) {
+        if (!this.engine) {
             this.showPage('main');
             this.toast('Carga un ROM para empezar');
             return;
@@ -870,7 +907,7 @@ const App = {
     },
 
     renderMain() {
-        const hasGame = !!this.gb;
+        const hasGame = !!this.engine;
         this.el.menu.querySelectorAll('[data-needs-game]').forEach((el) => { el.hidden = !hasGame; });
         const now = document.getElementById('now-playing');
         if (hasGame) {
@@ -1182,7 +1219,7 @@ const App = {
                 this.settings.customPalette[Number(input.dataset.custom)] = input.value;
                 this.settings.palette = 'custom';
                 this.saveSettings();
-                Palettes.apply(this.settings);
+                this.applyPalette();
                 this.redraw();
             });
             input.addEventListener('change', () => this.renderPalettes());
@@ -1375,6 +1412,9 @@ const App = {
             this.turboToggled = false;
         }
         this.applySettings();
+        if (name === 'engine') {
+            this.switchEngine();
+        }
     },
 
     async handleAction(action, target) {
@@ -1467,14 +1507,14 @@ const App = {
             case 'palette':
                 this.settings.palette = target.dataset.id;
                 this.saveSettings();
-                Palettes.apply(this.settings);
+                this.applyPalette();
                 this.redraw();
                 this.renderPalettes();
                 break;
             case 'palette-custom':
                 this.settings.palette = 'custom';
                 this.saveSettings();
-                Palettes.apply(this.settings);
+                this.applyPalette();
                 this.redraw();
                 this.renderPalettes();
                 break;
@@ -1509,7 +1549,7 @@ const App = {
             case 'clear-data':
                 if (confirm('¿Borrar TODOS los ROMs, partidas, estados y ajustes guardados? No se puede deshacer.')) {
                     this.running = false;
-                    this.gb = null;
+                    this.engine = null;
                     this.game = null;
                     await Store.clearAll();
                     location.reload();
@@ -1520,12 +1560,12 @@ const App = {
 
     // ---------------------------------------------------------------- .sav I/O
     exportSav() {
-        const cartridge = this.gb.cartridge;
-        if (!cartridge.hasRAM || !cartridge.hasBattery || !cartridge.ram) {
+        const sav = this.engine.exportSav();
+        if (!sav) {
             this.toast('Este juego no tiene partida guardada en el cartucho', 3000);
             return;
         }
-        const blob = new Blob([cartridge.ram], { type: 'application/octet-stream' });
+        const blob = new Blob([sav], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1537,17 +1577,16 @@ const App = {
     },
 
     async importSav(bytes) {
-        const cartridge = this.gb.cartridge;
-        if (!cartridge.hasRAM || !cartridge.hasBattery || !cartridge.ram) {
+        if (!this.engine.hasSaveData()) {
             this.toast('Este juego no usa partida guardada en el cartucho', 3000);
             return;
         }
         if (!confirm('¿Reemplazar la partida actual por la del archivo? El juego se reiniciará.')) {
             return;
         }
-        const ram = new Uint8Array(cartridge.ram.length);
-        ram.set(bytes.subarray(0, ram.length));
-        Store.setSync('sram:' + this.game.id, Bytes.toBase64(ram));
+        // Stored whole: SameBoy reads the RTC appended to .sav files, the legacy core ignores it.
+        Store.setSync('sram:' + this.game.id, Bytes.toBase64(bytes));
+        await Store.remove('rtc:' + this.game.id);
         await Store.remove(`state:${this.game.id}:auto`);
         await Store.remove(`statemeta:${this.game.id}:auto`);
         await Store.remove(`thumb:${this.game.id}:auto`);

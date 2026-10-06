@@ -215,6 +215,17 @@
                     <label class="row check"><span>Mostrar FPS</span>
                         <input type="checkbox" class="toggle" data-setting="showFps"></label>
 
+                    <h2>Motor de emulación</h2>
+                    <label class="row"><span>Motor de Game Boy</span>
+                        <select data-setting="engine">
+                            <option value="sameboy">SameBoy · preciso (recomendado)</option>
+                            <option value="legacy">gemuboi.js · ligero</option>
+                        </select></label>
+                    <p class="note">SameBoy es uno de los emuladores más precisos que existen (WebAssembly). El motor
+                        ligero es JavaScript puro y sirve de alternativa. La partida guardada se comparte entre ambos; los
+                        estados guardados pertenecen al motor con el que se crearon. Al cambiar de motor, el juego se
+                        reinicia.</p>
+
                     <h2>Guardado</h2>
                     <label class="row check"><span>Autoguardar estado (continuar donde lo dejaste)</span>
                         <input type="checkbox" class="toggle" data-setting="autoState"></label>
@@ -257,8 +268,11 @@
                         <tr><td>Guardar / cargar estado</td><td>F2 / F4</td></tr>
                     </table>
                     <p class="note">También funcionan los mandos Bluetooth/USB (Xbox, PlayStation, 8BitDo…).</p>
-                    <p class="note">Basado en <a href="https://github.com/danwsong/gemuboi-js" target="_blank"
-                            rel="noopener">gemuboi.js</a>. Debes usar copias de seguridad de juegos que poseas.</p>
+                    <p class="note">Motor principal: <a href="https://github.com/LIJI32/SameBoy" target="_blank"
+                            rel="noopener">SameBoy</a> © Lior Halphon (licencia Expat), compilado a WebAssembly, con sus
+                        boot ROMs de código abierto. Motor alternativo e interfaz basados en <a
+                            href="https://github.com/danwsong/gemuboi-js" target="_blank" rel="noopener">gemuboi.js</a>.
+                        Debes usar copias de seguridad de juegos que poseas.</p>
                     <p class="note" id="version-info"></p>
                 </section>
             </div>
@@ -281,6 +295,7 @@
     <script src="js/savestate.js" defer></script>
     <script src="js/dpad.js" defer></script>
     <script src="js/gamepad.js" defer></script>
+    <script src="js/engines.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 
