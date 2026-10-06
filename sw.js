@@ -19,6 +19,7 @@ const ASSETS = [
     'js/storage.js',
     'js/palettes.js',
     'js/savestate.js',
+    'js/dpad.js',
     'js/gamepad.js',
     'js/app.js',
     'img/favicon.ico',
