@@ -198,14 +198,25 @@ body {
     inset: 0;
     --rx: 0deg;
     --ry: 0deg;
-    transform: perspective(260px) rotateX(var(--rx)) rotateY(var(--ry));
-    transition: transform .045s ease-out;
+    /* Hinged on the edge opposite to the pressed direction: only the pressed
+       side sinks, the opposite arm stays where it is (no seesaw). */
+    --ox: 50%;
+    --oy: 50%;
+    transform-origin: var(--ox) var(--oy);
+    transform: perspective(300px) rotateX(var(--rx)) rotateY(var(--ry));
+    transition: transform .04s ease-out;
 }
 
-.ctrl-dpad.p-up .tilt { --rx: 13deg; }
-.ctrl-dpad.p-down .tilt { --rx: -13deg; }
-.ctrl-dpad.p-left .tilt { --ry: -13deg; }
-.ctrl-dpad.p-right .tilt { --ry: 13deg; }
+.ctrl-dpad.p-up .tilt { --rx: 9deg; --oy: 100%; }
+.ctrl-dpad.p-down .tilt { --rx: -9deg; --oy: 0%; }
+.ctrl-dpad.p-left .tilt { --ry: -9deg; --ox: 100%; }
+.ctrl-dpad.p-right .tilt { --ry: 9deg; --ox: 0%; }
+
+/* Diagonals: a single rotation around the diagonal axis through the opposite corner. */
+.ctrl-dpad.p-up.p-left .tilt { transform: perspective(300px) rotate3d(1, -1, 0, 8deg); }
+.ctrl-dpad.p-up.p-right .tilt { transform: perspective(300px) rotate3d(1, 1, 0, 8deg); }
+.ctrl-dpad.p-down.p-left .tilt { transform: perspective(300px) rotate3d(1, 1, 0, -8deg); }
+.ctrl-dpad.p-down.p-right .tilt { transform: perspective(300px) rotate3d(-1, 1, 0, 8deg); }
 
 .ctrl-dpad .side,
 .ctrl-dpad .top,
@@ -242,19 +253,12 @@ body {
     transition: fill .045s;
 }
 
-/* The pressed arm goes down into shadow, the opposite one catches light. */
+/* The pressed arm goes down into shadow. */
 .ctrl-dpad.p-up .arm-up,
 .ctrl-dpad.p-down .arm-down,
 .ctrl-dpad.p-left .arm-left,
 .ctrl-dpad.p-right .arm-right {
     fill: rgba(0, 0, 0, .3);
-}
-
-.ctrl-dpad.p-up .arm-down,
-.ctrl-dpad.p-down .arm-up,
-.ctrl-dpad.p-left .arm-right,
-.ctrl-dpad.p-right .arm-left {
-    fill: rgba(255, 255, 255, .07);
 }
 
 .ctrl-dpad .dimple {
