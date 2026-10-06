@@ -2283,3 +2283,72 @@ a.btn.block[hidden],
 .btn[hidden] {
     display: none;
 }
+
+/* Import help: one-line hint with a "?" button that unfolds the details */
+.help {
+    margin: 0 2px 10px;
+}
+
+.help summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.help summary::-webkit-details-marker {
+    display: none;
+}
+
+.help summary .note {
+    margin: 0;
+}
+
+.help-btn {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.help[open] .help-btn {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+}
+
+.help-body {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.help-body p {
+    margin: 0 0 8px;
+}
+
+.help-body p:last-child {
+    margin-bottom: 0;
+}
+
+.help-body ul {
+    margin: 0 0 8px;
+    padding-left: 18px;
+}
+
+.help-body code {
+    font-size: 12px;
+}
