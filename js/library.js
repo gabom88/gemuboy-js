@@ -321,23 +321,23 @@ const Library = {
     },
 
     // --------------------------------------------------- lists in static/txt
-    // static/txt/index.json lists the files (the deploy workflow regenerates it);
-    // without it, the folder listing of a local web server is read instead.
+    // static/txt/index.json lists the files (the deploy workflow regenerates it).
+    // The folder listing of a local web server is read too, so new .txt files
+    // show up while testing without editing the index.
     async txtLists() {
         let files = [];
         try {
             const response = await fetch('static/txt/index.json', { cache: 'no-cache' });
             if (response.ok) {
-                files = await response.json();
+                const index = await response.json();
+                files = Array.isArray(index) ? index : [];
             }
         } catch (ignored) { }
-        if (!Array.isArray(files) || !files.length) {
-            try {
-                const response = await fetch('static/txt/', { cache: 'no-cache' });
-                const html = response.ok ? await response.text() : '';
-                files = [...html.matchAll(/href="(?:[^"]*\/)?([^"/?#]+\.txt)"/gi)].map((m) => decodeURIComponent(m[1]));
-            } catch (ignored) { }
-        }
+        try {
+            const response = await fetch('static/txt/', { cache: 'no-cache' });
+            const html = response.ok ? await response.text() : '';
+            files = files.concat([...html.matchAll(/href="(?:[^"]*\/)?([^"/?#]+\.txt)"/gi)].map((m) => decodeURIComponent(m[1])));
+        } catch (ignored) { }
         files = [...new Set(files.filter((file) => typeof file === 'string' && /^[^/\\]+\.txt$/i.test(file)))];
         return Promise.all(files.map(async (file) => {
             const info = { file, title: file.replace(/\.txt$/i, '').replace(/[_-]+/g, ' '), description: '', count: 0 };

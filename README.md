@@ -86,7 +86,8 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   - Cada juego muestra su descripción, año, género, colección, autor, licencia y un enlace a su web.
   - **Listas TXT incluidas**: todos los `.txt` de la carpeta [`static/txt`](static/txt) aparecen en
     *Importar lista TXT → Listas TXT* para importarlos con un toque. Para añadir una lista basta con subir
-    el archivo a esa carpeta: al publicar, el workflow actualiza `static/txt/index.json`. La primera línea
+    el archivo a esa carpeta: no hace falta editar `static/txt/index.json` (el workflow lo regenera al
+    publicar y, en local, la app también lee el listado de la carpeta). La primera línea
     `#` es el título de la lista y `#coleccion: Nombre` asigna la colección.
   - **Importar listas TXT** (Biblioteca → Importar lista TXT): un juego por línea con
     `nombre | url | descripción | año | género | portada`. Las fichas se crean al momento y cada ROM se
