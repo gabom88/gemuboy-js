@@ -1,58 +1,81 @@
+<div align="center">
+
+<img src="img/icon-192.png" width="96" alt="GemuBoy">
+
 # GemuBoy
 
-Emulador de **Game Boy** y **Game Boy Color** escrito en JavaScript puro, convertido en una
-**PWA** (aplicación web instalable) optimizada para **Safari en iPhone** y navegadores **Android**.
-Funciona sin conexión una vez instalada.
+**Emulador de Game Boy y Game Boy Color para el móvil, directamente en el navegador.**
+Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y Android.
 
-Basado en [gemuboi.js](https://github.com/danwsong/gemuboi-js) de Daniel Song.
+## ▶️ [Jugar ahora: gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)
 
-## Funciones
+[![Abrir GemuBoy](https://img.shields.io/badge/ABRIR%20EMULADOR-gabom88.github.io%2Fgemuboy--js-8bac0f?style=for-the-badge&logo=googlechrome&logoColor=white)](https://gabom88.github.io/gemuboy-js/)
 
-- 📱 **PWA instalable**: pantalla completa, icono propio, funciona offline (service worker).
-- 🎮 **Gamepad táctil multitáctil** con cruceta de 8 direcciones, A, B, Start, Select, Turbo y Menú.
-  - **Editor de controles**: mueve cada botón arrastrándolo, cambia su **tamaño** (deslizador o pellizcando)
-    y su **transparencia**; opacidad general; mostrar/ocultar botones. Diseños independientes para
-    vertical y horizontal.
+<a href="https://gabom88.github.io/gemuboy-js/"><img src="docs/screenshots/qr.png" width="160" alt="Código QR para abrir GemuBoy en el móvil"></a><br>
+<sub>Escanea el código con la cámara del móvil para abrirlo</sub>
+
+</div>
+
+---
+
+## 📸 Capturas
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/portrait.png" width="220" alt="Jugando en vertical"><br><sub>Jugando en vertical</sub></td>
+    <td align="center"><img src="docs/screenshots/homebrew.png" width="220" alt="Juegos homebrew gratuitos"><br><sub>20 juegos homebrew gratis</sub></td>
+    <td align="center"><img src="docs/screenshots/editor.png" width="220" alt="Editor de controles"><br><sub>Editor de controles táctiles</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/palette.png" width="220" alt="Paletas de color"><br><sub>Paletas con vista previa</sub></td>
+    <td align="center"><img src="docs/screenshots/menu.png" width="220" alt="Menú principal"><br><sub>Menú principal</sub></td>
+    <td align="center"></td>
+  </tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/landscape.png" width="680" alt="Jugando en horizontal (Game Boy Color)"><br><sub>Modo horizontal con un juego de Game Boy Color</sub></p>
+
+## 📱 Instalar en el móvil
+
+| iPhone / iPad (Safari) | Android (Chrome) |
+| --- | --- |
+| 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Safari | 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Chrome |
+| 2. Pulsa **Compartir** ⎋ | 2. Pulsa **Instalar** (o menú ⋮ → **Instalar aplicación**) |
+| 3. Elige **«Añadir a pantalla de inicio»** | 3. Abre GemuBoy desde el icono |
+
+Ya instalada se abre a pantalla completa, como una app nativa, y funciona sin conexión. También
+puedes usarla directamente en el navegador sin instalar nada.
+
+**Para empezar a jugar:** pulsa **🆓 Juegos homebrew gratuitos** y elige uno, o **📂 Cargar ROM**
+para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
+
+## ✨ Funciones
+
+- 📱 **PWA instalable**: pantalla completa, icono propio y funciona sin conexión.
+- 🎮 **Gamepad táctil multitáctil**: cruceta de 8 direcciones, A, B, Start, Select, Turbo y Menú.
+  - **Editor de controles**: mueve cada botón arrastrándolo y cambia su **tamaño** (con el deslizador
+    o pellizcando) y su **transparencia**. Hay opacidad general y puedes mostrar u ocultar botones.
+    Los diseños vertical y horizontal se guardan por separado.
   - Vibración al pulsar (Android; háptica en iOS 18+).
-- 🎨 **Paletas de color** para juegos de Game Boy original: 18 predefinidas (DMG verde, Pocket, Light,
-  paletas de arranque de GBC…) y una **personalizada** con selector de color. Vista previa en vivo.
+- 🎨 **Paletas de color** para juegos de Game Boy original: 18 predefinidas (verde DMG, Pocket, Light,
+  paletas de arranque de la Game Boy Color…) y una **personalizada**. Vista previa en vivo.
 - 💾 **Guardado en tiempo real**:
-  - La partida del cartucho (SRAM + reloj RTC) se guarda automáticamente cada segundo que cambia y al
-    salir/cerrar la app.
-  - **Autoguardado de estado**: al volver a abrir la app continúas exactamente donde lo dejaste
-    (importante en iOS, que cierra las PWA en segundo plano).
+  - La partida del cartucho (y el reloj de juegos como Pokémon Oro/Plata) se guarda automáticamente
+    en cuanto cambia y al salir de la app.
+  - **Autoguardado de estado**: al reabrir la app continúas exactamente donde lo dejaste
+    (importante en iPhone, que cierra las apps web en segundo plano).
   - 4 ranuras de **estados guardados** con miniatura.
-  - Exportar / importar partidas `.sav`.
-- 🗄️ **localStorage**: se guardan los ajustes del usuario y los **ROMs** (comprimidos con gzip). Si un
-  ROM no cabe en la cuota de localStorage, se guarda automáticamente en IndexedDB.
-- 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
+  - Exportar e importar partidas `.sav`.
+- 🗄️ **localStorage**: se guardan tus ajustes y los **ROMs** (comprimidos). Si un ROM no cabe, se
+  guarda automáticamente en IndexedDB.
 - 🆓 **20 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
-  Dawn Will Come, Shock Lobster…) con licencias libres, listos para jugar desde la app. Al jugar uno
-  se guarda en la biblioteca y funciona sin conexión. Créditos y licencias en
-  [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
-- ⏩ Turbo (2×–8×, mantener o alternar), teclado y mandos Bluetooth/USB.
-- 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado, contador de FPS.
+  Dawn Will Come, Shock Lobster…) con licencias libres. Al jugar uno se guarda en tu biblioteca y
+  funciona sin conexión. Créditos y licencias en [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
+- 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
+- ⏩ Turbo (2×–8×, mantener pulsado o activar/desactivar), teclado y mandos Bluetooth/USB.
+- 🖥️ Escalado ajustado o entero (píxeles perfectos), efecto LCD, suavizado y contador de FPS.
 
-## Usar en el móvil
-
-1. Abre la web publicada (GitHub Pages) en **Safari** (iPhone) o **Chrome** (Android).
-2. **iPhone**: Compartir → «Añadir a pantalla de inicio». **Android**: menú ⋮ → «Instalar aplicación».
-3. Abre la app, pulsa **Cargar ROM** y elige tu archivo `.gb`/`.gbc`/`.zip`.
-
-## Publicación en GitHub Pages
-
-El flujo `.github/workflows/pages.yml` publica el sitio automáticamente en cada push a `master`.
-Solo hay que activarlo una vez: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-La app quedará en `https://<usuario>.github.io/gemuboy-js/`.
-
-## Desarrollo local
-
-```sh
-npx http-server -c-1 .
-# abre http://localhost:8080
-```
-
-## Teclado
+## ⌨️ Teclado (ordenador)
 
 | Botón | Tecla |
 | --- | --- |
@@ -61,6 +84,24 @@ npx http-server -c-1 .
 | B | Z / J |
 | Start | Enter |
 | Select | Shift / Retroceso |
-| Turbo | Espacio |
+| Turbo | Espacio (mantener) |
 | Menú | Esc |
 | Guardar / cargar estado 1 | F2 / F4 |
+
+## 🛠️ Para desarrolladores
+
+**Desarrollo local**
+
+```sh
+npx http-server -c-1 .
+# abre http://localhost:8080
+```
+
+**Publicación:** el workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publica la
+app en GitHub Pages en cada push a `master`. Requiere activar una sola vez
+**Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+---
+
+Basado en [gemuboi.js](https://github.com/danwsong/gemuboi-js) de Daniel Song. Usa solo copias de
+juegos que poseas legalmente.
