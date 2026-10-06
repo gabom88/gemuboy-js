@@ -23,7 +23,7 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/portrait.png" width="220" alt="Jugando en vertical"><br><sub>Jugando en vertical</sub></td>
-    <td align="center"><img src="docs/screenshots/homebrew.png" width="220" alt="Juegos homebrew gratuitos"><br><sub>20 juegos homebrew gratis</sub></td>
+    <td align="center"><img src="docs/screenshots/homebrew.png" width="220" alt="Juegos homebrew gratuitos"><br><sub>24 juegos homebrew gratis</sub></td>
     <td align="center"><img src="docs/screenshots/editor.png" width="220" alt="Editor de controles"><br><sub>Editor de controles táctiles</sub></td>
   </tr>
   <tr>
@@ -75,8 +75,9 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   - Exportar e importar partidas `.sav`.
 - 🗄️ **localStorage**: se guardan tus ajustes y los **ROMs** (comprimidos). Si un ROM no cabe, se
   guarda automáticamente en IndexedDB.
-- 🆓 **20 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
-  Dawn Will Come, Shock Lobster…) con licencias libres. Al jugar uno se guarda en tu biblioteca y
+- 🆓 **24 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
+  Dawn Will Come, Shock Lobster, Super JetPak DX, Deadeus, DMG Deals Damage…), la mayoría con
+  licencias libres. Al jugar uno se guarda en tu biblioteca y
   funciona sin conexión. Créditos y licencias en [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
 - 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
 - 🎮 **Mandos Bluetooth/USB y teclado configurables**: asigna cada botón (A, B, Start, Select, cruceta,
