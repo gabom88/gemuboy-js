@@ -196,50 +196,24 @@ const Controls = {
             el.className = 'ctrl ctrl-' + id;
             el.dataset.id = id;
             if (id === 'dpad') {
-                // Five pieces: a fixed center and four arms. Only the pressed arm sinks
-                // (foreshortens toward the center and darkens toward its tip).
+                // A fixed center and four arms, each a real 3D piece hinged where it meets
+                // the center: the pressed arm tilts into the case with perspective while
+                // the center and the other arms stay put.
                 const cross = 'M37 6 H63 V37 H94 V63 H63 V94 H37 V63 H6 V37 H37 Z';
-                const arms = {
-                    up: { d: 'M37 6 H63 V41 H37 Z', origin: '50px 40px', sink: [50, 40, 50, 4] },
-                    down: { d: 'M37 59 H63 V94 H37 Z', origin: '50px 60px', sink: [50, 60, 50, 96] },
-                    left: { d: 'M6 37 H41 V63 H6 Z', origin: '40px 50px', sink: [40, 50, 4, 50] },
-                    right: { d: 'M59 37 H94 V63 H59 Z', origin: '60px 50px', sink: [60, 50, 96, 50] },
+                // [left, top, width, height] in % of the d-pad box.
+                const pieces = {
+                    up: [37, 4, 26, 35], left: [4, 37, 35, 26], right: [61, 37, 35, 26],
+                    center: [37, 37, 26, 26], down: [37, 61, 26, 35],
                 };
-                const order = ['up', 'left', 'right', 'down'];
-                const gradients = order.map((dir) => {
-                    const [x1, y1, x2, y2] = arms[dir].sink;
-                    return `<linearGradient id="sink-${dir}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
-                        <stop offset="0" stop-color="#000" stop-opacity=".05"/>
-                        <stop offset="1" stop-color="#000" stop-opacity=".42"/>
-                    </linearGradient>`;
+                const html = Object.entries(pieces).map(([name, [x, y, w, h]]) => {
+                    // One vertical gradient spanning the whole d-pad, so the joins don't show.
+                    const size = 10000 / h;
+                    const pos = h < 100 ? (y / (100 - h)) * 100 : 0;
+                    const style = `left:${x}%;top:${y}%;width:${w}%;height:${h}%;` +
+                        `background-size:100% ${size}%;background-position:0 ${pos}%`;
+                    return `<div class="dp dp-${name}" style="${style}"></div>`;
                 }).join('');
-                const tops = order.map((dir) => `
-                    <g class="arm arm-${dir}" style="transform-origin:${arms[dir].origin}">
-                        <path class="side" d="${arms[dir].d}" transform="translate(0 4)"/>
-                        <path class="top" d="${arms[dir].d}"/>
-                        ${this.shadeRect(arms[dir].d, dir)}
-                    </g>`).join('');
-                el.innerHTML = `
-                    <svg class="well" viewBox="0 0 100 100" aria-hidden="true"><path d="${cross}"/></svg>
-                    <svg class="pad" viewBox="0 0 100 100" aria-hidden="true">
-                        <defs>
-                            <linearGradient id="dpad-face" gradientUnits="userSpaceOnUse" x1="0" y1="3" x2="0" y2="97">
-                                <stop class="face-hi" offset="0"/>
-                                <stop class="face-mid" offset=".5"/>
-                                <stop class="face-lo" offset="1"/>
-                            </linearGradient>
-                            <linearGradient id="dpad-dimple" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0" stop-color="#000" stop-opacity=".38"/>
-                                <stop offset="1" stop-color="#fff" stop-opacity=".1"/>
-                            </linearGradient>
-                            ${gradients}
-                        </defs>
-                        ${tops}
-                        <g class="center">
-                            <path class="top" d="M37 37 H63 V63 H37 Z"/>
-                        </g>
-                        <circle class="dimple" cx="50" cy="50" r="8.5"/>
-                    </svg>`;
+                el.innerHTML = `<svg class="well" viewBox="0 0 100 100" aria-hidden="true"><path d="${cross}"/></svg>${html}`;
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
@@ -343,6 +317,7 @@ const Controls = {
             const cy = Math.min(Math.max(c.y * H, minY), Math.max(minY, maxY));
             const show = c.visible && (id === 'menu' || this.visibleTouch);
             el.style.width = w + 'px';
+            el.style.setProperty('--dp', w + 'px');
             el.style.height = h + 'px';
             el.style.transform = `translate(${cx - w / 2}px, ${cy - h / 2}px)`;
             el.style.fontSize = (id === 'start' || id === 'select' ? h * 0.36 : h * 0.4) + 'px';
