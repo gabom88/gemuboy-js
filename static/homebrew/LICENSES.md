@@ -1,6 +1,8 @@
-# Juegos homebrew incluidos
+# Juegos homebrew de la lista «homebrew.txt»
 
-Estos juegos son obra de sus autores y se redistribuyen sin modificaciones bajo sus licencias libres.
+Estos juegos son obra de sus autores. Sus ROMs ya no se incluyen en la app: la lista
+[`static/txt/homebrew.txt`](../txt/homebrew.txt) los descarga sin modificaciones desde este repositorio
+(versión `4c6fec8`), bajo sus licencias libres. Esta carpeta conserva solo las portadas.
 Selección obtenida del [Homebrew Hub](https://hh.gbdev.io) ([gbdev/database](https://github.com/gbdev/database)).
 El código fuente de cada juego está disponible en el enlace indicado.
 
