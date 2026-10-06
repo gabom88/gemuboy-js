@@ -1,0 +1,1 @@
+Tetris	https://raw.githubusercontent.com/AlexBlackmore/roms/master/gb/Tetris%20(World)%20(Rev%20A).gb	Bloques que caen para completar líneas.	1989	Puzle	https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy/master/Named_Boxarts/Tetris%20%28World%29%20%28Rev%201%29.png
