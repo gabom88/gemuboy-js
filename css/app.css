@@ -2365,11 +2365,11 @@ a.btn.block[hidden],
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin: 12px 0 0;
+    margin: 12px 0 2px;
 }
 
-.lib-buttons + .btn.block {
-    margin-top: 8px;
+.btn.block.lib-lists {
+    margin-top: 14px;
 }
 
 /* Yellow button with a light sweep */

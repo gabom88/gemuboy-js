@@ -179,18 +179,18 @@
                             <button type="button" class="icon-btn" id="lib-view" data-action="lib-view" aria-label="Cambiar vista (lista / cuadrícula)"></button>
                         </div>
                     </div>
-                    <p class="note" id="lib-count"></p>
-                    <div id="library-list" class="cards"></div>
-                    <button type="button" class="btn block" data-action="lib-more" id="lib-more" hidden>Mostrar más</button>
                     <div class="lib-buttons">
                         <button type="button" class="btn shine" data-action="import-games">Importar lista</button>
                         <button type="button" class="btn primary" data-action="open-rom">Añadir ROM</button>
                     </div>
-                    <button type="button" class="btn block" data-action="page" data-page-target="import">Listas TXT</button>
+                    <p class="note" id="lib-count"></p>
+                    <div id="library-list" class="cards"></div>
+                    <button type="button" class="btn block" data-action="lib-more" id="lib-more" hidden>Mostrar más</button>
+                    <button type="button" class="btn block lib-lists" data-action="page" data-page-target="import">Listas TXT</button>
+                    <button type="button" class="btn danger block" data-action="lib-clear">Eliminar toda la biblioteca</button>
                     <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
                         caben, en IndexedDB). Los juegos importados de una lista se descargan la primera vez que los
                         juegas y después funcionan sin conexión.</p>
-                    <button type="button" class="btn danger block" data-action="lib-clear">Eliminar toda la biblioteca</button>
                 </section>
 
                 <section class="page" data-page="import" data-title="Importar lista TXT">

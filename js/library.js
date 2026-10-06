@@ -326,6 +326,10 @@ const Library = {
         let text;
         try {
             const response = await fetch('static/txt/games.txt', { cache: 'no-cache' });
+            if (response.status === 404) {
+                this.app.toast('Todavía no hay una lista games.txt en static/txt', 4000);
+                return null;
+            }
             if (!response.ok) {
                 throw new Error(String(response.status));
             }
@@ -835,7 +839,7 @@ const Library = {
         // Everything registered for the game except the ROM and cover URLs.
         const system = entry.cgb === undefined ? '' : entry.cgb ? 'GBC' : 'GB';
         const size = entry.size && this.isDownloaded(entry) ? this.app.formatSize(entry.size) : '';
-        card.querySelector('.meta').textContent = [entry.year, entry.genre, entry.collection, system, size].filter(Boolean).join(' · ');
+        card.querySelector('.meta').textContent = [...new Set([entry.year, entry.genre, entry.collection, system, size].filter(Boolean))].join(' · ');
         const desc = card.querySelector('.desc');
         desc.textContent = entry.description || '';
         desc.hidden = !entry.description;
