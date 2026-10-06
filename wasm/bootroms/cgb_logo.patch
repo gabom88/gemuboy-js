@@ -1,0 +1,28 @@
+diff --git a/BootROMs/cgb_boot.asm b/BootROMs/cgb_boot.asm
+index 8e3e74a..8e88295 100644
+--- a/BootROMs/cgb_boot.asm
++++ b/BootROMs/cgb_boot.asm
+@@ -90,22 +90,10 @@ ELSE
+ 
+     call .write_with_palette
+ 
+-    ; Repeat the 3 tiles common between E and B. This saves 27 bytes after
+-    ; compression, with a cost of 17 bytes of code.
+-    push af
+-    sub $20
+-    sub $3
+-    jr nc, .notspecial
+-    add $20
+-    call .write_with_palette
+-    dec c
+-.notspecial
+-    pop af
+-
+     add d ; d = 3 for SameBoy logo, d = 1 for Nintendo logo
+     dec c
+     jr nz, .tilemapRowLoop
+-    sub 44
++    sub 47
+     push de
+     ld de, $10
+     add hl, de
