@@ -593,6 +593,10 @@ class Sound {
         const now = Sound.ctx.currentTime;
         const nowPlusDelay = now + Sound.latency;
         this.nextPush = this.nextPush || nowPlusDelay;
+        if (this.nextPush > now + Sound.maxLatency) {
+            // Running faster than real time (turbo): drop this buffer.
+            return;
+        }
         if (this.nextPush >= now) {
             const bufferSource = Sound.ctx.createBufferSource();
             bufferSource.buffer = this.buffer;
@@ -647,6 +651,7 @@ Sound.bufferSamples = 4096;
 Sound.sampleFrequency = 65536;
 Sound.bufferDuration = Sound.bufferSamples / Sound.sampleFrequency;
 Sound.latency = 0.125;
+Sound.maxLatency = 0.5;
 Sound.volume = 0.25;
 Sound.frameFrequency = 512;
 Sound.cyclesPerFrame = Sound.frequency / Sound.frameFrequency;

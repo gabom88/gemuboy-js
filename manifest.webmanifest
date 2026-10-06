@@ -1,0 +1,27 @@
+{
+    "name": "GemuBoy – Emulador de Game Boy",
+    "short_name": "GemuBoy",
+    "description": "Emulador de Game Boy y Game Boy Color que funciona sin conexión.",
+    "id": "./",
+    "start_url": "./",
+    "scope": "./",
+    "display": "fullscreen",
+    "display_override": ["fullscreen", "standalone"],
+    "orientation": "any",
+    "background_color": "#16171c",
+    "theme_color": "#16171c",
+    "lang": "es",
+    "categories": ["games", "entertainment"],
+    "icons": [
+        { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+        { "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    ],
+    "file_handlers": [
+        {
+            "action": "./",
+            "accept": { "application/octet-stream": [".gb", ".gbc"] }
+        }
+    ]
+}
