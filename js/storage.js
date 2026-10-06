@@ -224,6 +224,7 @@ const Bytes = {
             if (view.getUint32(offset, true) !== 0x02014b50) {
                 break;
             }
+            const flags = view.getUint16(offset + 8, true);
             const method = view.getUint16(offset + 10, true);
             const compressedSize = view.getUint32(offset + 20, true);
             const nameLength = view.getUint16(offset + 28, true);
@@ -232,8 +233,12 @@ const Bytes = {
             const localOffset = view.getUint32(offset + 42, true);
             const name = new TextDecoder().decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
             offset += 46 + nameLength + extraLength + commentLength;
-            if (!/\.(gb|gbc|cgb|sgb)$/i.test(name)) {
+            // Skip macOS metadata ("__MACOSX/._game.gb") and anything that isn't a ROM.
+            if (!/\.(gb|gbc|cgb|sgb)$/i.test(name) || /(^|\/)__MACOSX\//.test(name) || /(^|\/)\._/.test(name)) {
                 continue;
+            }
+            if (flags & 1) {
+                throw 'El ZIP está protegido con contraseña';
             }
             const localNameLength = view.getUint16(localOffset + 26, true);
             const localExtraLength = view.getUint16(localOffset + 28, true);
@@ -248,7 +253,7 @@ const Bytes = {
                 }
                 return { name, data: await this.transform(data, new DecompressionStream('deflate-raw')) };
             }
-            throw 'Método de compresión ZIP no soportado';
+            throw `El ZIP usa un método de compresión no soportado (${method}); vuelve a comprimirlo con «Deflate» (el normal)`;
         }
         throw 'El ZIP no contiene ningún ROM .gb/.gbc';
     },

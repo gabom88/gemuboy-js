@@ -428,12 +428,26 @@ const Library = {
     },
 
     // ------------------------------------------------------------ downloads
+    // Links to a file's page on GitHub ("…/blob/main/x.zip") point to an HTML page;
+    // the file itself is served from raw.githubusercontent.com.
+    directUrl(url) {
+        const github = /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+?)(?:[?#].*)?$/i.exec(url);
+        if (github) {
+            return `https://raw.githubusercontent.com/${github[1]}/${github[2]}/${github[3]}`;
+        }
+        return url;
+    },
+
     async fetchRom(url, onProgress) {
+        const direct = this.directUrl(url);
         let response;
         try {
-            response = await fetch(url);
+            response = await fetch(direct);
         } catch (error) {
-            throw this.downloadError(navigator.onLine === false ? 'offline' : 'blocked');
+            if (navigator.onLine === false) {
+                throw this.downloadError('offline');
+            }
+            throw this.downloadError(/^https?:\/\/(?:www\.)?github\.com\/[^/]+\/[^/]+\/releases\//i.test(direct) ? 'release' : 'blocked');
         }
         if (!response.ok) {
             throw this.downloadError('http', response.status);
@@ -464,11 +478,18 @@ const Library = {
         } else {
             bytes = new Uint8Array(await response.arrayBuffer());
         }
+        const head = new TextDecoder().decode(bytes.subarray(0, 64)).trimStart().toLowerCase();
+        if (head.startsWith('<!doctype') || head.startsWith('<html')) {
+            throw this.downloadError('html');
+        }
+        if (head.startsWith('version https://git-lfs')) {
+            throw this.downloadError('lfs');
+        }
         if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
             try {
                 bytes = (await Bytes.unzipRom(bytes)).data;
             } catch (error) {
-                throw this.downloadError('zip');
+                throw Object.assign(new Error(String(error.message || error)), { kind: 'zip' });
             }
         }
         if (bytes.length < 0x150) {
@@ -483,6 +504,9 @@ const Library = {
             blocked: 'El servidor no permite la descarga directa desde el navegador',
             http: `El servidor respondió con un error (${status})`,
             zip: 'El .zip no contiene un ROM de Game Boy',
+            html: 'El enlace abre una página web, no el archivo. En GitHub usa el botón «Raw» (enlace raw.githubusercontent.com)',
+            lfs: 'El archivo está guardado con Git LFS en GitHub; súbelo como archivo normal o usa su enlace media.githubusercontent.com',
+            release: 'Los archivos de «Releases» de GitHub no se pueden descargar desde el navegador; súbelo al repositorio y usa su enlace «Raw»',
             invalid: 'El archivo descargado no es un ROM de Game Boy',
             storage: 'No hay espacio para guardar el ROM',
         };
