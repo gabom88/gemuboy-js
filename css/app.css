@@ -193,69 +193,69 @@ body {
     opacity: .7;
 }
 
-.ctrl-dpad .side,
-.ctrl-dpad .top {
-    stroke-width: 6;
-    stroke-linejoin: round;
+.ctrl-dpad .dp {
+    position: absolute;
+    background-image: linear-gradient(180deg,
+        color-mix(in srgb, var(--dpad), #fff 10%) 0%,
+        var(--dpad) 50%,
+        color-mix(in srgb, var(--dpad), #000 18%) 100%);
+    background-repeat: no-repeat;
+    /* Thickness of the cross, seen below each piece. */
+    box-shadow: 0 calc(var(--dp) * .04) 0 var(--dpad-side);
+    transition: transform .05s ease-out, box-shadow .05s;
 }
 
-.ctrl-dpad .side {
-    fill: var(--dpad-side);
-    stroke: var(--dpad-side);
+.ctrl-dpad .dp-up { border-radius: calc(var(--dp) * .045) calc(var(--dp) * .045) 0 0; transform-origin: 50% 94%; z-index: 1; }
+.ctrl-dpad .dp-left { border-radius: calc(var(--dp) * .045) 0 0 calc(var(--dp) * .045); transform-origin: 94% 50%; z-index: 1; }
+.ctrl-dpad .dp-right { border-radius: 0 calc(var(--dp) * .045) calc(var(--dp) * .045) 0; transform-origin: 6% 50%; z-index: 1; }
+.ctrl-dpad .dp-center { z-index: 2; box-shadow: none; }
+.ctrl-dpad .dp-down { border-radius: 0 0 calc(var(--dp) * .045) calc(var(--dp) * .045); transform-origin: 50% 6%; z-index: 3; }
+
+/* Concave dimple in the middle */
+.ctrl-dpad .dp-center::after {
+    content: "";
+    position: absolute;
+    left: 17%;
+    top: 17%;
+    width: 66%;
+    height: 66%;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(0, 0, 0, .38), rgba(255, 255, 255, .1));
 }
 
-.ctrl-dpad .top {
-    /* Opaque gradient shared by all pieces, so the joins are invisible. */
-    fill: url(#dpad-face);
-    stroke: url(#dpad-face);
-}
-
-.ctrl-dpad .face-hi { stop-color: color-mix(in srgb, var(--dpad), #fff 9%); }
-.ctrl-dpad .face-mid { stop-color: var(--dpad); }
-.ctrl-dpad .face-lo { stop-color: color-mix(in srgb, var(--dpad), #000 16%); }
-
-.ctrl-dpad .shade {
+/* Shade that darkens a pressed arm toward its tip */
+.ctrl-dpad .dp::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
     opacity: 0;
-    transition: opacity .04s;
+    transition: opacity .05s;
 }
 
-/* Only the pressed arm moves: it sinks, so it looks shorter from above and
-   darker toward its tip. The center and the other arms never move. */
-.ctrl-dpad .arm {
-    transition: transform .04s ease-out;
-}
+.ctrl-dpad .dp-up::before { background: linear-gradient(0deg, rgba(0, 0, 0, .05), rgba(0, 0, 0, .45)); }
+.ctrl-dpad .dp-down::before { background: linear-gradient(180deg, rgba(0, 0, 0, .05), rgba(0, 0, 0, .45)); }
+.ctrl-dpad .dp-left::before { background: linear-gradient(90deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .05)); }
+.ctrl-dpad .dp-right::before { background: linear-gradient(270deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .05)); }
 
-.ctrl-dpad.p-up .arm-up,
-.ctrl-dpad.p-down .arm-down {
-    transform: scaleY(.9);
-}
+/* Only the pressed arm tilts into the case, hinged on the center. */
+.ctrl-dpad.p-up .dp-up { transform: perspective(calc(var(--dp) * 1.6)) rotateX(26deg); }
+.ctrl-dpad.p-down .dp-down { transform: perspective(calc(var(--dp) * 1.6)) rotateX(-26deg); }
+.ctrl-dpad.p-left .dp-left { transform: perspective(calc(var(--dp) * 1.6)) rotateY(-26deg); }
+.ctrl-dpad.p-right .dp-right { transform: perspective(calc(var(--dp) * 1.6)) rotateY(26deg); }
 
-.ctrl-dpad.p-left .arm-left,
-.ctrl-dpad.p-right .arm-right {
-    transform: scaleX(.9);
-}
-
-.ctrl-dpad.p-up .arm-up .shade,
-.ctrl-dpad.p-down .arm-down .shade,
-.ctrl-dpad.p-left .arm-left .shade,
-.ctrl-dpad.p-right .arm-right .shade {
+.ctrl-dpad.p-up .dp-up::before,
+.ctrl-dpad.p-down .dp-down::before,
+.ctrl-dpad.p-left .dp-left::before,
+.ctrl-dpad.p-right .dp-right::before {
     opacity: 1;
 }
 
-.ctrl-dpad .dimple {
-    fill: url(#dpad-dimple);
-}
-
-/* A sunken arm shows less of its side wall. */
-.ctrl-dpad .side {
-    transition: opacity .04s;
-}
-
-.ctrl-dpad.p-up .arm-up .side,
-.ctrl-dpad.p-down .arm-down .side,
-.ctrl-dpad.p-left .arm-left .side,
-.ctrl-dpad.p-right .arm-right .side {
-    opacity: .45;
+.ctrl-dpad.p-up .dp-up,
+.ctrl-dpad.p-down .dp-down,
+.ctrl-dpad.p-left .dp-left,
+.ctrl-dpad.p-right .dp-right {
+    box-shadow: 0 calc(var(--dp) * .015) 0 var(--dpad-side);
 }
 
 /* ---- A / B: matte convex buttons inside a slanted oval recess ---- */
