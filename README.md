@@ -48,7 +48,7 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 Ya instalada se abre a pantalla completa, como una app nativa, y funciona sin conexión. También
 puedes usarla directamente en el navegador sin instalar nada.
 
-**Para empezar a jugar:** abre **Juegos** y elige **🆓 Juegos homebrew gratuitos**, o **📂 Cargar ROM**
+**Para empezar a jugar:** abre **Juegos → Biblioteca** y elige uno de los juegos homebrew incluidos, o **📂 Cargar ROM**
 para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 
 ## ✨ Funciones
@@ -82,7 +82,8 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 - 📚 **Biblioteca personalizable**: buscador, filtros (descargados, favoritos, colección, género),
   orden por último jugado, nombre, año o fecha, vista en lista o cuadrícula de portadas y una ficha
   editable por juego (nombre, descripción, año, género, autor, colección, URL, portada).
-  - **Importar listas TXT** (Juegos → Importar lista TXT): un juego por línea con
+  - Cada juego muestra su descripción, año, género, colección, autor, licencia y un enlace a su web.
+  - **Importar listas TXT** (Biblioteca → Importar lista TXT): un juego por línea con
     `nombre | url | descripción | año | género | portada`. Las fichas se crean al momento y cada ROM se
     descarga la primera vez que pulsas *Jugar*; después funciona sin conexión. Si una URL ya existe, la
     ficha se actualiza. La biblioteca se puede exportar en el mismo formato.
@@ -102,8 +103,8 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   la ✕.
 - 🖥️ **Ajuste de pantalla automático o manual**: en automático y sin marco la pantalla usa todo el ancho; en
   manual puedes arrastrarla y cambiar su tamaño con un deslizador o pellizcando (Controles → Ajustar pantalla).
-- 📤 **Exportar e importar los ajustes** como `GBoy-JS_Settings_[fecha] [hora].json` (Ajustes → Copia de
-  seguridad de ajustes).
+- 📤 **Exportar e importar los ajustes y la biblioteca** (fichas, colecciones, favoritos y portadas) como
+  `GBoy-JS_Settings_[fecha] [hora].json` (Ajustes → Copia de seguridad). Los ROMs no se incluyen.
 - ⚙️ **Dos motores de emulación** (Menú → Ajustes → Motor de emulación):
   - **SameBoy** (principal): emulador de alta precisión compilado a WebAssembly. Mejor sonido,
     compatibilidad y temporización; incluye reloj de tiempo real y vibración de cartuchos con rumble.

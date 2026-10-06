@@ -1140,7 +1140,7 @@ const App = {
     // Parent of each menu page, for the back button.
     pageParents: {
         library: 'games',
-        import: 'games',
+        import: 'library',
         entry: 'library',
         states: 'saveload',
         savedata: 'saveload',
@@ -2108,15 +2108,22 @@ const App = {
     },
 
     // ------------------------------------------------------- settings backup
-    exportSettings() {
+    async exportSettings() {
         const now = new Date();
         const pad = (n) => String(n).padStart(2, '0');
         const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
         // ':' isn't allowed in file names on Windows, iOS or Android.
         const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-        const data = { app: 'GBoy-JS', type: 'settings', version: 1, exported: now.toISOString(), settings: this.settings };
+        const data = {
+            app: 'GBoy-JS',
+            type: 'settings',
+            version: 2,
+            exported: now.toISOString(),
+            settings: this.settings,
+            library: await Library.exportData(),
+        };
         this.download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `GBoy-JS_Settings_${date} ${time}.json`);
-        this.toast('Ajustes exportados');
+        this.toast(`Ajustes y biblioteca exportados (${data.library.entries.length} juegos)`);
     },
 
     // Keeps only known settings whose type matches the default value.
@@ -2146,11 +2153,25 @@ const App = {
         }
         const input = data && typeof data.settings === 'object' ? data.settings : data;
         const clean = input && typeof input === 'object' ? this.cleanSettings(input) : {};
-        if (!Object.keys(clean).length) {
+        const library = data && data.library && Array.isArray(data.library.entries) ? data.library : null;
+        if (!Object.keys(clean).length && !library) {
             this.toast('⚠️ El archivo no contiene ajustes de GBoy-JS', 4000);
             return;
         }
-        if (!confirm('¿Reemplazar tus ajustes actuales por los del archivo?')) {
+        const question = [
+            Object.keys(clean).length ? 'Se reemplazarán tus ajustes actuales por los del archivo.' : '',
+            library ? `La biblioteca del archivo (${library.entries.length} juegos) se combinará con la tuya; no se borra nada.` : '',
+        ].filter(Boolean).join('\n');
+        if (!confirm(question + '\n\n¿Continuar?')) {
+            return;
+        }
+        let libraryResult = null;
+        if (library) {
+            libraryResult = await Library.importData(library);
+        }
+        if (!Object.keys(clean).length) {
+            this.showPage(this.page);
+            this.toast(libraryResult ? `Biblioteca importada: ${libraryResult.added} nuevos, ${libraryResult.updated} actualizados` : '⚠️ No se pudo importar la biblioteca', 4000);
             return;
         }
         const previousEngine = this.settings.engine;
@@ -2162,7 +2183,7 @@ const App = {
         this.applySettings();
         this.redraw();
         this.showPage(this.page);
-        this.toast('Ajustes importados');
+        this.toast(libraryResult ? `Ajustes importados · biblioteca: ${libraryResult.added} nuevos, ${libraryResult.updated} actualizados` : 'Ajustes importados', 4000);
         if (this.settings.engine !== previousEngine) {
             this.switchEngine();
         }

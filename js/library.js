@@ -329,6 +329,104 @@ const Library = {
         return added;
     },
 
+    // ---------------------------------------------------- backup (settings JSON)
+    entryKeys: {
+        string: ['id', 'romId', 'url', 'title', 'description', 'year', 'genre', 'author', 'license', 'web', 'image', 'collection', 'name', 'homebrew'],
+        number: ['size', 'added', 'played'],
+        boolean: ['cgb', 'fav', 'hasCover'],
+    },
+
+    // Library entries and custom covers (ROMs are not included).
+    async exportData() {
+        const entries = this.list().map((entry) => this.cleanEntry(entry)).filter(Boolean);
+        const covers = {};
+        for (const entry of entries) {
+            if (entry.hasCover) {
+                const cover = await Store.get('cover:' + entry.id);
+                if (cover) {
+                    covers[entry.id] = cover;
+                }
+            }
+        }
+        return { entries, covers, homebrewSeeded: Store.getJSON('hbseeded', []) };
+    },
+
+    cleanEntry(raw) {
+        if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id || raw.id.length > 200) {
+            return null;
+        }
+        const entry = {};
+        for (const [type, keys] of Object.entries(this.entryKeys)) {
+            for (const key of keys) {
+                if (typeof raw[key] === type) {
+                    entry[key] = type === 'string' ? raw[key].slice(0, this.limits[key] || 200) : raw[key];
+                }
+            }
+        }
+        for (const key of ['url', 'image']) {
+            if (entry[key] && !this.isWebUrl(entry[key]) && !/^static\//.test(entry[key])) {
+                delete entry[key];
+            }
+        }
+        if (entry.web && !this.isWebUrl(entry.web)) {
+            delete entry.web;
+        }
+        entry.title = entry.title || (entry.url ? this.nameFromUrl(entry.url) : 'Sin título');
+        return entry;
+    },
+
+    // Merges a library backup: new entries are added, existing ones (same id or
+    // URL) get the saved metadata. Downloads on this device are kept.
+    async importData(data) {
+        if (!data || !Array.isArray(data.entries)) {
+            return null;
+        }
+        const list = this.list();
+        const byId = new Map(list.map((e) => [e.id, e]));
+        const byUrl = new Map(list.filter((e) => e.url).map((e) => [this.urlKey(e.url), e]));
+        const covers = data.covers && typeof data.covers === 'object' ? data.covers : {};
+        let added = 0;
+        let updated = 0;
+        for (const raw of data.entries) {
+            const entry = this.cleanEntry(raw);
+            if (!entry) {
+                continue;
+            }
+            let target = byId.get(entry.id) || (entry.url && byUrl.get(this.urlKey(entry.url)));
+            if (target) {
+                const keep = { id: target.id, where: target.where, size: target.size, romId: target.romId || entry.romId, hasCover: target.hasCover };
+                Object.assign(target, entry, keep);
+                updated++;
+            } else {
+                target = entry;
+                target.where = await Store.where('rom:' + entry.id);
+                target.hasCover = !!(await Store.where('cover:' + entry.id));
+                list.push(target);
+                byId.set(target.id, target);
+                if (target.url) {
+                    byUrl.set(this.urlKey(target.url), target);
+                }
+                added++;
+            }
+            const cover = covers[raw.id];
+            if (typeof cover === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(cover) && cover.length < 2000000) {
+                if (await Store.put('cover:' + target.id, cover).catch(() => null)) {
+                    target.hasCover = true;
+                    this.coverCache.delete(target.id);
+                }
+            }
+        }
+        if (Array.isArray(data.homebrewSeeded)) {
+            const seeded = new Set(Store.getJSON('hbseeded', []));
+            data.homebrewSeeded.filter((id) => typeof id === 'string').forEach((id) => seeded.add(id));
+            Store.setJSON('hbseeded', [...seeded]);
+        }
+        if (!this.save(list)) {
+            return null;
+        }
+        return { added, updated };
+    },
+
     // ------------------------------------------------------------ downloads
     async fetchRom(url, onProgress) {
         let response;
@@ -642,22 +740,53 @@ const Library = {
         card.className = 'card lib' + (this.app.game && this.app.game.entryId === entry.id ? ' current' : '');
         card.dataset.entry = entry.id;
         card.innerHTML = `
-            <button type="button" class="cover" data-action="lib-play" aria-label="Jugar"><span class="cover-ph"></span></button>
-            <div class="rom-info">
-                <strong></strong>
-                <small class="meta"></small>
-                <span class="status"></span>
-                <span class="bar"><i></i></span>
+            <div class="lib-main">
+                <button type="button" class="cover" data-action="lib-play" aria-label="Jugar"><span class="cover-ph"></span></button>
+                <div class="rom-info">
+                    <strong></strong>
+                    <small class="meta"></small>
+                    <span class="status"></span>
+                    <span class="bar"><i></i></span>
+                </div>
+                <div class="lib-actions">
+                    <button type="button" class="fav" data-action="lib-fav" aria-label="Favorito"></button>
+                    ${grid ? '' : '<button type="button" class="btn primary small" data-action="lib-play">Jugar</button>'}
+                    <button type="button" class="btn ghost small more" data-action="lib-edit" aria-label="Ficha del juego">⋯</button>
+                </div>
             </div>
-            <div class="lib-actions">
-                <button type="button" class="fav" data-action="lib-fav" aria-label="Favorito"></button>
-                ${grid ? '' : '<button type="button" class="btn primary small" data-action="lib-play">Jugar</button>'}
-                <button type="button" class="btn ghost small more" data-action="lib-edit" aria-label="Ficha del juego">⋯</button>
-            </div>`;
+            <p class="desc"></p>
+            <small class="details"></small>`;
         card.querySelectorAll('[data-action]').forEach((button) => { button.dataset.id = entry.id; });
         card.querySelector('strong').textContent = entry.title || 'Sin título';
         card.querySelector('.cover-ph').textContent = (entry.title || '?').trim().charAt(0).toUpperCase();
-        card.querySelector('.meta').textContent = [entry.year, entry.genre, entry.collection || (entry.cgb ? 'GBC' : '')].filter(Boolean).join(' · ');
+        // Everything registered for the game except the ROM and cover URLs.
+        const system = entry.cgb === undefined ? '' : entry.cgb ? 'GBC' : 'GB';
+        const size = entry.size && this.isDownloaded(entry) ? this.app.formatSize(entry.size) : '';
+        card.querySelector('.meta').textContent = [entry.year, entry.genre, entry.collection, system, size].filter(Boolean).join(' · ');
+        const desc = card.querySelector('.desc');
+        desc.textContent = entry.description || '';
+        desc.hidden = !entry.description;
+        const details = card.querySelector('.details');
+        const parts = [];
+        if (entry.author) {
+            parts.push('Autor: ' + entry.author);
+        }
+        if (entry.license) {
+            parts.push('Licencia: ' + entry.license);
+        }
+        details.textContent = parts.join(' · ');
+        if (this.isWebUrl(entry.web)) {
+            if (parts.length) {
+                details.append(' · ');
+            }
+            const link = document.createElement('a');
+            link.href = entry.web;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'web';
+            details.appendChild(link);
+        }
+        details.hidden = !details.textContent;
         this.updateCardStatus(card, entry);
         this.coverOf(entry).then((src) => {
             if (src) {
