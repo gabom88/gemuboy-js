@@ -25,6 +25,8 @@ const App = {
         screenMode: 'auto',
         screenLayouts: {},
         menuTheme: 'night',
+        libraryView: 'list',
+        librarySort: 'played',
     },
 
     stateSlots: ['auto', '1', '2', '3', '4'],
@@ -61,12 +63,18 @@ const App = {
             screenEditor: document.getElementById('screen-editor'),
             screenDrag: document.getElementById('screen-drag'),
             settingsInput: document.getElementById('settings-input'),
+            assignInput: document.getElementById('assign-input'),
+            txtInput: document.getElementById('txt-input'),
+            capturePop: document.getElementById('capture-pop'),
+            cameraBtn: document.getElementById('camera-btn'),
         };
         // iOS greys out files with unknown extensions when "accept" is set.
         if (!this.isIOS) {
             this.el.romInput.accept = '.gb,.gbc,.zip';
             this.el.savInput.accept = '.sav,.srm';
             this.el.settingsInput.accept = '.json,application/json';
+            this.el.assignInput.accept = '.gb,.gbc,.zip';
+            this.el.txtInput.accept = '.txt,.tsv,.csv,text/plain';
         }
 
         this.el.bezel = document.getElementById('bezel');
@@ -75,6 +83,7 @@ const App = {
         Palettes.apply(this.settings);
         Input.configure(this.settings);
         Controls.init(this);
+        Library.init(this);
         this.bindEvents();
         this.applySettings();
         this.layout();
@@ -117,6 +126,8 @@ const App = {
 
     icons: {
         sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+        grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>',
+        list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>',
         moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
     },
 
@@ -858,7 +869,8 @@ const App = {
         return { bytes, name };
     },
 
-    async loadRom(bytes, { name = '', title = '', store = true, state = null } = {}) {
+    // entryId: library entry the ROM comes from (saves and states use the ROM's own id).
+    async loadRom(bytes, { name = '', title = '', store = true, state = null, entryId = null } = {}) {
         if (bytes.length < 0x150) {
             this.toast('El archivo no es un ROM válido', 4000);
             return false;
@@ -868,6 +880,7 @@ const App = {
         if (title) {
             info.title = title;
         }
+        info.entryId = entryId || info.id;
 
         this.stopGame();
         const engine = await this.createEngine(bytes);
@@ -884,7 +897,7 @@ const App = {
         engine.setPalette(this.settings);
         this.updateVolume();
         this.running = true;
-        Store.setSync('last', info.id);
+        Store.setSync('last', info.entryId);
 
         if (state) {
             await this.loadState(state, { quiet: true });
@@ -893,9 +906,9 @@ const App = {
         this.requestWakeLock();
 
         if (store) {
-            this.storeRom(bytes, info);
+            await this.storeRom(bytes, info);
         } else {
-            this.touchLibrary(info.id);
+            this.touchLibrary(info.entryId);
         }
         return true;
     },
@@ -929,27 +942,35 @@ const App = {
         return null;
     },
 
+    // Saves a ROM loaded from a file. If the same ROM is already in the library
+    // (e.g. imported from a list), that entry is used.
     async storeRom(bytes, info) {
         const list = this.library();
-        let entry = list.find((item) => item.id === info.id);
-        if (!entry || !(await Store.where('rom:' + info.id))) {
+        let entry = list.find((item) => item.id === info.id || item.romId === info.id);
+        if (!entry || !entry.where || !(await Store.where('rom:' + entry.id))) {
+            const id = entry ? entry.id : info.id;
             try {
-                const where = await Store.put('rom:' + info.id, await Bytes.pack(bytes));
-                entry = { id: info.id, title: info.title, name: info.name, size: info.size, cgb: info.cgb, added: Date.now(), where };
-                const updated = this.library().filter((item) => item.id !== info.id);
-                updated.unshift(entry);
-                this.setLibrary(updated);
-                if (this.pendingHomebrewTag) {
-                    this.pendingHomebrewTag();
-                    this.pendingHomebrewTag = null;
+                const where = await Store.put('rom:' + id, await Bytes.pack(bytes));
+                const values = { where, size: info.size, cgb: info.cgb, romId: info.id };
+                if (entry) {
+                    Library.update(id, values);
+                } else {
+                    const updated = this.library();
+                    updated.unshift(Object.assign({ id, title: info.title, name: info.name, added: Date.now() }, values));
+                    this.setLibrary(updated);
                 }
                 this.toast(where === 'localStorage' ? 'ROM guardado en el dispositivo' : 'ROM guardado (IndexedDB)');
             } catch (error) {
                 console.error(error);
                 this.toast('⚠️ No hay espacio para guardar el ROM', 4000);
             }
+            entry = this.library().find((item) => item.id === id);
         }
-        this.touchLibrary(info.id);
+        if (entry) {
+            this.game.entryId = entry.id;
+            Store.setSync('last', entry.id);
+            this.touchLibrary(entry.id);
+        }
     },
 
     touchLibrary(id) {
@@ -957,36 +978,42 @@ const App = {
         const entry = list.find((item) => item.id === id);
         if (entry) {
             entry.played = Date.now();
-            list.sort((a, b) => (b.played || b.added || 0) - (a.played || a.added || 0));
             this.setLibrary(list);
         }
     },
 
     async loadFromLibrary(id, { resume = true } = {}) {
+        const entry = this.library().find((item) => item.id === id) || { id };
         const packed = await Store.get('rom:' + id);
         if (!packed) {
             this.toast('No se encontró el ROM guardado', 4000);
-            this.setLibrary(this.library().filter((item) => item.id !== id));
+            Library.update(id, { where: null });
             return false;
         }
         const bytes = await Bytes.unpack(packed);
-        const entry = this.library().find((item) => item.id === id) || {};
         let state = null;
-        if (resume && this.settings.autoState && await Store.where(`state:${id}:auto`)) {
+        if (resume && this.settings.autoState && await Store.where(`state:${Library.romId(entry)}:auto`)) {
             state = 'auto';
         }
-        return this.loadRom(bytes, { name: entry.name, title: entry.title, store: false, state });
+        return this.loadRom(bytes, { name: entry.name, title: entry.title, store: false, state, entryId: id });
     },
 
+    // Removes a library entry with its ROM, cover and save states (the cartridge
+    // save is kept).
     async deleteRom(id) {
+        const entry = this.library().find((item) => item.id === id) || { id };
+        const romId = Library.romId(entry);
         await Store.remove('rom:' + id);
+        await Store.remove('cover:' + id);
+        Library.coverCache.delete(id);
+        Library.downloads.delete(id);
         for (const slot of this.stateSlots) {
-            await Store.remove(`state:${id}:${slot}`);
-            await Store.remove(`thumb:${id}:${slot}`);
-            await Store.remove(`statemeta:${id}:${slot}`);
+            await Store.remove(`state:${romId}:${slot}`);
+            await Store.remove(`thumb:${romId}:${slot}`);
+            await Store.remove(`statemeta:${romId}:${slot}`);
         }
         this.setLibrary(this.library().filter((item) => item.id !== id));
-        if (Store.getSync('last') === id && (!this.game || this.game.id === id)) {
+        if (Store.getSync('last') === id && (!this.game || this.game.entryId === id)) {
             await Store.remove('last');
         }
     },
@@ -1020,10 +1047,10 @@ const App = {
     // Restarts the current game from scratch (keeps the cartridge save).
     async restartGame() {
         const bytes = this.romBytes;
-        const name = this.game.name;
+        const { name, title, entryId } = this.game;
         this.persistNow();
         this.running = false;
-        return this.loadRom(bytes, { name, store: false });
+        return this.loadRom(bytes, { name, title, entryId, store: false });
     },
 
     async startDemo() {
@@ -1038,8 +1065,9 @@ const App = {
     },
 
     async boot() {
+        await Library.seedHomebrew();
         const last = Store.getSync('last');
-        if (last && this.library().some((item) => item.id === last)) {
+        if (last && this.library().some((item) => item.id === last && item.where)) {
             try {
                 await this.loadFromLibrary(last);
             } catch (error) {
@@ -1112,7 +1140,8 @@ const App = {
     // Parent of each menu page, for the back button.
     pageParents: {
         library: 'games',
-        homebrew: 'games',
+        import: 'games',
+        entry: 'library',
         states: 'saveload',
         savedata: 'saveload',
         palette: 'interface',
@@ -1136,10 +1165,12 @@ const App = {
         document.getElementById('menu-back').style.visibility = page === 'main' ? 'hidden' : 'visible';
         this.el.menu.querySelector('.sheet').scrollTop = 0;
         this.renderGameState();
+        this.toggleCapturePop(false);
         const render = {
             main: () => this.renderMain(),
-            library: () => this.renderLibrary(),
-            homebrew: () => this.renderHomebrew(),
+            library: () => Library.render(),
+            import: () => this.renderImport(),
+            entry: () => Library.renderEntry(),
             states: () => this.renderStates(),
             palette: () => this.renderPalettes(),
             settings: () => this.renderSettings(),
@@ -1157,6 +1188,7 @@ const App = {
         const hasGame = !!this.engine;
         this.el.menu.querySelectorAll('[data-needs-game]').forEach((el) => { el.disabled = !hasGame; });
         this.el.menu.querySelectorAll('[data-no-game]').forEach((el) => { el.hidden = hasGame; });
+        this.el.cameraBtn.hidden = !hasGame;
     },
 
     renderMain() {
@@ -1178,32 +1210,6 @@ const App = {
         return new Date(time).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' });
     },
 
-    renderLibrary() {
-        const container = document.getElementById('library-list');
-        const list = this.library();
-        container.innerHTML = '';
-        if (!list.length) {
-            container.innerHTML = '<p class="empty">Todavía no hay ROMs guardados.</p>';
-            return;
-        }
-        for (const item of list) {
-            const card = document.createElement('div');
-            card.className = 'card rom' + (this.game && this.game.id === item.id ? ' current' : '');
-            card.innerHTML = `
-                <div class="rom-info">
-                    <strong></strong>
-                    <small>${item.cgb ? 'GBC' : 'GB'} · ${this.formatSize(item.size)} · ${item.where === 'indexedDB' ? 'IndexedDB' : 'localStorage'}</small>
-                </div>
-                <div class="card-actions">
-                    <button type="button" class="btn primary small" data-action="play-rom" data-id="">Jugar</button>
-                    <button type="button" class="btn ghost small" data-action="delete-rom" data-id="" aria-label="Eliminar">🗑</button>
-                </div>`;
-            card.querySelector('strong').textContent = item.title;
-            card.querySelectorAll('[data-id]').forEach((button) => { button.dataset.id = item.id; });
-            container.appendChild(card);
-        }
-    },
-
     // --- Free homebrew catalog (bundled in static/homebrew) ---
     async homebrewCatalog() {
         if (!this.catalog) {
@@ -1216,82 +1222,152 @@ const App = {
         return this.catalog;
     },
 
-    async renderHomebrew() {
-        const container = document.getElementById('homebrew-list');
-        let catalog;
-        try {
-            catalog = await this.homebrewCatalog();
-        } catch (error) {
-            container.innerHTML = '<p class="empty">No se pudo cargar el catálogo. Comprueba la conexión.</p>';
+    // Plays a bundled homebrew game (they live in the library as the "Homebrew" collection).
+    async playHomebrew(id) {
+        await Library.seedHomebrew();
+        const entry = this.library().find((item) => item.homebrew === id);
+        return entry ? Library.play(entry.id) : false;
+    },
+
+    // --- Import page ---
+    updateImportGutter() {
+        const text = document.getElementById('import-text');
+        const lines = text.value.split('\n').length;
+        const gutter = document.getElementById('import-gutter');
+        if (gutter.dataset.lines !== String(lines)) {
+            gutter.dataset.lines = lines;
+            gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+        }
+        gutter.scrollTop = text.scrollTop;
+    },
+
+    renderImport() {
+        this.updateImportGutter();
+        document.getElementById('import-result').innerHTML = '';
+        document.getElementById('import-apply').disabled = true;
+        this.importParsed = null;
+    },
+
+    previewImport() {
+        const text = document.getElementById('import-text').value;
+        const collection = document.getElementById('import-collection').value.trim().slice(0, 60);
+        const parsed = Library.parse(text, collection);
+        const plan = Library.plan(parsed);
+        const result = document.getElementById('import-result');
+        result.innerHTML = '';
+        const summary = document.createElement('p');
+        summary.className = 'summary';
+        summary.textContent = parsed.entries.length || parsed.errors.length
+            ? `${plan.added} nuevos · ${plan.updated} se actualizarán · ${plan.errors} con errores`
+            : 'La lista está vacía.';
+        result.appendChild(summary);
+        if (parsed.errors.length) {
+            const ul = document.createElement('ul');
+            for (const error of parsed.errors.slice(0, 50)) {
+                const li = document.createElement('li');
+                li.textContent = `Línea ${error.line}: ${error.message}`;
+                ul.appendChild(li);
+            }
+            if (parsed.errors.length > 50) {
+                const li = document.createElement('li');
+                li.textContent = `… y ${parsed.errors.length - 50} más`;
+                ul.appendChild(li);
+            }
+            result.appendChild(ul);
+        }
+        if (parsed.entries.length) {
+            const table = document.createElement('table');
+            table.className = 'preview-table';
+            for (const { line, values } of parsed.entries.slice(0, 30)) {
+                const row = table.insertRow();
+                row.insertCell().textContent = line;
+                const info = row.insertCell();
+                const strong = document.createElement('strong');
+                strong.textContent = values.title;
+                info.appendChild(strong);
+                const meta = [values.year, values.genre, values.collection].filter(Boolean).join(' · ');
+                let host = values.url;
+                try {
+                    host = new URL(values.url).host;
+                } catch (ignored) { }
+                const small = document.createElement('small');
+                small.textContent = (meta ? meta + ' · ' : '') + host;
+                info.appendChild(document.createElement('br'));
+                info.appendChild(small);
+            }
+            result.appendChild(table);
+            if (parsed.entries.length > 30) {
+                const more = document.createElement('p');
+                more.className = 'note';
+                more.textContent = `… y ${parsed.entries.length - 30} más`;
+                result.appendChild(more);
+            }
+        }
+        this.importParsed = parsed.entries.length ? parsed : null;
+        document.getElementById('import-apply').disabled = !this.importParsed;
+    },
+
+    applyImport() {
+        if (!this.importParsed) {
             return;
         }
-        const saved = new Set(this.library().map((item) => item.homebrew).filter(Boolean));
-        container.innerHTML = '';
-        for (const game of catalog) {
-            const card = document.createElement('div');
-            card.className = 'card homebrew';
-            card.innerHTML = `
-                <div class="thumb"><img alt="" loading="lazy"></div>
-                <div class="rom-info">
-                    <strong></strong>
-                    <small class="meta"></small>
-                    <p class="desc"></p>
-                    <div class="card-actions">
-                        <button type="button" class="btn primary small" data-action="play-homebrew">${saved.has(game.id) ? 'Jugar ✓' : 'Jugar'}</button>
-                        <a class="btn ghost small" target="_blank" rel="noopener">Web</a>
-                    </div>
-                </div>`;
-            card.querySelector('img').src = 'static/homebrew/' + game.thumb;
-            card.querySelector('strong').textContent = game.title;
-            card.querySelector('.meta').textContent = `${game.genre} · ${game.developer} · ${game.license}`;
-            card.querySelector('.desc').textContent = game.description;
-            card.querySelector('a').href = game.url;
-            card.querySelector('button').dataset.id = game.id;
-            container.appendChild(card);
+        const result = Library.apply(this.importParsed);
+        if (!result) {
+            return;
+        }
+        this.importParsed = null;
+        document.getElementById('import-text').value = '';
+        this.toast(`Lista importada: ${result.added} nuevos, ${result.updated} actualizados`, 3000);
+        Library.view.filter = 'all';
+        Library.view.query = '';
+        this.showPage('library');
+    },
+
+    exportLibrary() {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        this.download(new Blob([Library.exportText()], { type: 'text/plain;charset=utf-8' }), `GBoy-JS_Biblioteca_${stamp}.txt`);
+        this.toast('Biblioteca exportada');
+    },
+
+    // --- Screenshots (camera button in the menu header) ---
+    async shotCover() {
+        const id = this.game && this.game.entryId;
+        if (!id || !Library.find(id)) {
+            this.toast('Este juego no está en la biblioteca', 3000);
+            return;
+        }
+        if (await Library.setCover(id, this.el.canvas.toDataURL('image/png'))) {
+            this.toast('Portada actualizada');
         }
     },
 
-    async playHomebrew(id) {
-        const game = (await this.homebrewCatalog()).find((item) => item.id === id);
-        if (!game) {
-            return false;
-        }
-        // Already saved in the local library: play it from there (works offline).
-        const entry = this.library().find((item) => item.homebrew === id);
-        if (entry && await Store.where('rom:' + entry.id)) {
-            return this.loadFromLibrary(entry.id);
-        }
-        this.toast('Descargando ' + game.title + '…', 10000);
-        let bytes;
-        try {
-            const response = await fetch('static/homebrew/' + game.file);
-            if (!response.ok) {
-                throw new Error(String(response.status));
+    shotPng() {
+        // 4× nearest-neighbour upscale so the capture looks sharp.
+        const scale = 4;
+        const canvas = document.createElement('canvas');
+        canvas.width = this.el.canvas.width * scale;
+        canvas.height = this.el.canvas.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(this.el.canvas, 0, 0, canvas.width, canvas.height);
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const title = (this.game.title || 'captura').replace(/[\\/:*?"<>|]+/g, ' ').trim();
+        canvas.toBlob((blob) => {
+            if (blob) {
+                this.download(blob, `GBoy-JS_${title}_${stamp}.png`);
+                this.toast('Captura guardada');
             }
-            bytes = new Uint8Array(await response.arrayBuffer());
-        } catch (error) {
-            this.toast('⚠️ No se pudo descargar el juego', 4000);
-            return false;
-        }
-        if (!(await this.loadRom(bytes, { name: game.file, title: game.title }))) {
-            return false;
-        }
-        // Tag the library entry so the catalog knows it's saved.
-        const tag = () => {
-            const list = this.library();
-            const item = list.find((x) => x.id === this.game.id);
-            if (item) {
-                item.homebrew = id;
-                item.title = game.title;
-                this.setLibrary(list);
-                return true;
-            }
-            return false;
-        };
-        if (!tag()) {
-            this.pendingHomebrewTag = tag;
-        }
-        return true;
+        }, 'image/png');
+    },
+
+    toggleCapturePop(show) {
+        const open = show !== undefined ? show : this.el.capturePop.hidden;
+        this.el.capturePop.hidden = !open;
+        this.el.cameraBtn.setAttribute('aria-expanded', String(open));
     },
 
     renderStates() {
@@ -1314,6 +1390,7 @@ const App = {
                     <div class="card-actions">
                         ${slot === 'auto' ? '' : `<button type="button" class="btn primary small" data-action="state-save" data-slot="${slot}">Guardar</button>`}
                         <button type="button" class="btn small" data-action="state-load" data-slot="${slot}" ${meta ? '' : 'disabled'}>Cargar</button>
+                        ${meta && thumb ? `<button type="button" class="btn ghost small" data-action="state-cover" data-slot="${slot}">Portada</button>` : ''}
                         ${meta ? `<button type="button" class="btn ghost small" data-action="state-delete" data-slot="${slot}" aria-label="Borrar">🗑</button>` : ''}
                     </div>
                 </div>`;
@@ -1452,6 +1529,9 @@ const App = {
     bindEvents() {
         const menu = this.el.menu;
         document.addEventListener('click', (ev) => {
+            if (!this.el.capturePop.hidden && !ev.target.closest('#capture-pop, #camera-btn')) {
+                this.toggleCapturePop(false);
+            }
             const target = ev.target.closest('[data-action]');
             if (target && !target.disabled) {
                 this.handleAction(target.dataset.action, target);
@@ -1507,6 +1587,51 @@ const App = {
             } catch (error) {
                 console.error(error);
                 this.toast(String(error), 4000);
+            }
+        });
+
+        // Library: search, filter, sort.
+        const search = document.getElementById('lib-search');
+        search.addEventListener('input', () => {
+            clearTimeout(this.searchTimer);
+            this.searchTimer = setTimeout(() => {
+                Library.view.query = search.value;
+                Library.view.limit = 60;
+                Library.render();
+            }, 150);
+        });
+        document.getElementById('lib-filter').addEventListener('change', (ev) => {
+            Library.view.filter = ev.target.value;
+            Library.view.limit = 60;
+            Library.render();
+        });
+        document.getElementById('lib-sort').addEventListener('change', (ev) => {
+            this.settings.librarySort = ev.target.value;
+            this.saveSettings();
+            Library.render();
+        });
+        const importText = document.getElementById('import-text');
+        importText.addEventListener('input', () => {
+            this.updateImportGutter();
+            document.getElementById('import-apply').disabled = true;
+        });
+        importText.addEventListener('scroll', () => {
+            document.getElementById('import-gutter').scrollTop = importText.scrollTop;
+        });
+        this.el.txtInput.addEventListener('change', async () => {
+            const file = this.el.txtInput.files[0];
+            this.el.txtInput.value = '';
+            if (file) {
+                importText.value = await file.text();
+                this.renderImport();
+                this.previewImport();
+            }
+        });
+        this.el.assignInput.addEventListener('change', async () => {
+            const file = this.el.assignInput.files[0];
+            this.el.assignInput.value = '';
+            if (file && Library.editingId && await Library.assignFile(Library.editingId, file)) {
+                Library.renderEntry();
             }
         });
 
@@ -1778,16 +1903,118 @@ const App = {
                     this.closeMenu();
                 }
                 break;
-            case 'play-rom':
-                if (await this.loadFromLibrary(target.dataset.id)) {
+            case 'lib-play':
+                if (await Library.play(target.dataset.id)) {
                     this.closeMenu();
                 }
                 break;
-            case 'delete-rom': {
-                const entry = this.library().find((item) => item.id === target.dataset.id);
-                if (entry && confirm(`¿Eliminar «${entry.title}» y sus estados guardados? La partida (.sav) se conserva.`)) {
+            case 'lib-fav': {
+                const entry = Library.find(target.dataset.id);
+                if (entry) {
+                    Library.update(entry.id, { fav: !entry.fav });
+                    Library.refreshEntry(entry.id);
+                }
+                break;
+            }
+            case 'lib-edit':
+                Library.editingId = target.dataset.id;
+                this.showPage('entry');
+                break;
+            case 'lib-view':
+                this.settings.libraryView = this.settings.libraryView === 'grid' ? 'list' : 'grid';
+                this.saveSettings();
+                Library.render();
+                break;
+            case 'lib-more':
+                Library.view.limit += 60;
+                Library.render();
+                break;
+            case 'lib-collection':
+                Library.view.filter = 'c:' + target.dataset.collection;
+                Library.view.query = '';
+                Library.view.limit = 60;
+                this.showPage('library');
+                break;
+            case 'lib-download-all':
+                Library.downloadAll(Library.visibleIds || []);
+                break;
+            case 'lib-export':
+                this.exportLibrary();
+                break;
+            case 'import-file':
+                this.el.txtInput.click();
+                break;
+            case 'import-clear':
+                document.getElementById('import-text').value = '';
+                this.renderImport();
+                break;
+            case 'import-preview':
+                this.previewImport();
+                break;
+            case 'import-apply':
+                this.applyImport();
+                break;
+            case 'restore-homebrew': {
+                const added = await Library.seedHomebrew(true);
+                this.toast(added ? `${added} juegos homebrew restaurados` : 'Los juegos homebrew ya están en la biblioteca');
+                break;
+            }
+            case 'entry-play':
+                if (await Library.play(Library.editingId)) {
+                    this.closeMenu();
+                }
+                break;
+            case 'entry-save':
+                if (Library.saveEntry()) {
+                    Library.renderEntry();
+                }
+                break;
+            case 'entry-download':
+                if (await Library.download(Library.editingId)) {
+                    this.toast('Descargado: ya puedes jugar sin conexión');
+                }
+                break;
+            case 'entry-assign':
+                this.el.assignInput.click();
+                break;
+            case 'entry-remove-download': {
+                const entry = Library.find(Library.editingId);
+                if (entry && confirm(`¿Borrar el ROM descargado de «${entry.title}»? La ficha, la portada y las partidas se conservan.`)) {
+                    await Library.removeDownload(entry.id);
+                    Library.renderEntry();
+                }
+                break;
+            }
+            case 'entry-delete': {
+                const entry = Library.find(Library.editingId);
+                if (entry && confirm(`¿Eliminar «${entry.title}» de la biblioteca con su ROM, portada y estados guardados? La partida (.sav) se conserva.`)) {
                     await this.deleteRom(entry.id);
-                    this.renderLibrary();
+                    this.showPage('library');
+                }
+                break;
+            }
+            case 'entry-cover-reset':
+                await Library.removeCover(Library.editingId);
+                Library.renderEntry();
+                break;
+            case 'capture-menu':
+                this.toggleCapturePop();
+                break;
+            case 'shot-cover':
+                this.toggleCapturePop(false);
+                await this.shotCover();
+                break;
+            case 'shot-png':
+                this.toggleCapturePop(false);
+                this.shotPng();
+                break;
+            case 'state-cover': {
+                const id = this.game && this.game.entryId;
+                const thumb = this.game && Store.getSync(`thumb:${this.game.id}:${target.dataset.slot}`);
+                if (!id || !Library.find(id)) {
+                    this.toast('Este juego no está en la biblioteca', 3000);
+                } else if (thumb && await Library.setCover(id, thumb)) {
+                    this.toast('Portada actualizada');
                 }
                 break;
             }

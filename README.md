@@ -79,7 +79,18 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   Dawn Will Come, Shock Lobster, Super JetPak DX, Deadeus, DMG Deals Damage…), la mayoría con
   licencias libres. Al jugar uno se guarda en tu biblioteca y
   funciona sin conexión. Créditos y licencias en [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
-- 📚 Biblioteca de ROMs guardados; carga de `.gb`, `.gbc` y `.zip`.
+- 📚 **Biblioteca personalizable**: buscador, filtros (descargados, favoritos, colección, género),
+  orden por último jugado, nombre, año o fecha, vista en lista o cuadrícula de portadas y una ficha
+  editable por juego (nombre, descripción, año, género, autor, colección, URL, portada).
+  - **Importar listas TXT** (Juegos → Importar lista TXT): un juego por línea con
+    `nombre | url | descripción | año | género | portada`. Las fichas se crean al momento y cada ROM se
+    descarga la primera vez que pulsas *Jugar*; después funciona sin conexión. Si una URL ya existe, la
+    ficha se actualiza. La biblioteca se puede exportar en el mismo formato.
+  - Si un servidor no permite la descarga directa desde el navegador, la ficha ofrece abrir el enlace y
+    **asignar el archivo** descargado.
+  - **Portadas y capturas**: el botón de cámara del menú usa la pantalla actual como portada del juego o
+    la guarda como PNG; también puedes usar la miniatura de un estado guardado.
+  - Carga de `.gb`, `.gbc` y `.zip` desde el dispositivo.
 - 🎮 **Mandos Bluetooth/USB y teclado configurables**: asigna cada botón (A, B, Start, Select, cruceta,
   turbo, menú y guardar/cargar estado) a la tecla o al botón del mando que quieras. Funciona con mandos
   Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.
