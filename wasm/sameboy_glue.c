@@ -1,4 +1,4 @@
-// Thin WebAssembly interface between SameBoy's core and GemuBoy (js/engines.js).
+// Thin WebAssembly interface between SameBoy's core and GBoy-JS (js/engines.js).
 // Everything the page needs goes through these exported sb_* functions.
 #include <emscripten.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds SameBoy's core as WebAssembly for GemuBoy: js/sameboy/sameboy.{js,wasm}.
+# Builds SameBoy's core as WebAssembly for GBoy-JS: js/sameboy/sameboy.{js,wasm}.
 # Requirements: Emscripten (emcc) on PATH. Boot ROMs are prebuilt in wasm/bootroms
 # (assembled from SameBoy's open-source sources with rgbds; see README in that folder).
 set -euo pipefail

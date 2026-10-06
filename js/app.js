@@ -1,4 +1,4 @@
-// GemuBoy PWA: application shell around the emulator core.
+// GBoy-JS PWA: application shell around the emulator core.
 const App = {
     defaults: {
         palette: 'dmg',
@@ -22,6 +22,9 @@ const App = {
         autoState: true,
         engine: 'sameboy',
         layouts: {},
+        screenMode: 'auto',
+        screenLayouts: {},
+        menuTheme: 'night',
     },
 
     stateSlots: ['auto', '1', '2', '3', '4'],
@@ -55,11 +58,15 @@ const App = {
             savInput: document.getElementById('sav-input'),
             saveIndicator: document.getElementById('save-indicator'),
             turboIndicator: document.getElementById('turbo-indicator'),
+            screenEditor: document.getElementById('screen-editor'),
+            screenDrag: document.getElementById('screen-drag'),
+            settingsInput: document.getElementById('settings-input'),
         };
         // iOS greys out files with unknown extensions when "accept" is set.
         if (!this.isIOS) {
             this.el.romInput.accept = '.gb,.gbc,.zip';
             this.el.savInput.accept = '.sav,.srm';
+            this.el.settingsInput.accept = '.json,application/json';
         }
 
         this.el.bezel = document.getElementById('bezel');
@@ -98,8 +105,45 @@ const App = {
         { id: 'dark', name: 'Oscuro', color: '#16171c' },
     ],
 
+    // Color themes for the menu and panels: 3 dark and 3 light.
+    themes: [
+        { id: 'night', name: 'Noche', dark: true },
+        { id: 'midnight', name: 'Medianoche', dark: true },
+        { id: 'grape', name: 'Uva', dark: true },
+        { id: 'paper', name: 'Papel', dark: false },
+        { id: 'sand', name: 'Arena', dark: false },
+        { id: 'sky', name: 'Cielo', dark: false },
+    ],
+
+    icons: {
+        sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+        moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+    },
+
+    theme() {
+        return this.themes.find((item) => item.id === this.settings.menuTheme) || this.themes[0];
+    },
+
+    applyTheme() {
+        const theme = this.theme();
+        this.el.app.dataset.theme = theme.id;
+        const button = document.getElementById('theme-btn');
+        button.innerHTML = theme.dark ? this.icons.moon : this.icons.sun;
+        button.title = 'Tema: ' + theme.name;
+    },
+
+    nextTheme() {
+        const index = this.themes.indexOf(this.theme());
+        const theme = this.themes[(index + 1) % this.themes.length];
+        this.settings.menuTheme = theme.id;
+        this.saveSettings();
+        this.applyTheme();
+        this.toast(`Tema: ${theme.name} (${theme.dark ? 'oscuro' : 'claro'})`);
+    },
+
     applySettings() {
         const s = this.settings;
+        this.applyTheme();
         const skin = this.skins.find((item) => item.id === s.skin) || this.skins[0];
         this.el.app.dataset.skin = skin.id;
         this.el.app.dataset.family = skin.id.split('-')[0];
@@ -152,6 +196,91 @@ const App = {
         };
     },
 
+    // Geometry of the screen box (screen + bezel + logo) at scale 1.
+    screenBox() {
+        const framed = !!this.settings.frame;
+        const portrait = this.orientation === 'portrait';
+        // Bezel around the screen, as a fraction of the screen size (DMG proportions).
+        const box = {
+            framed,
+            padX: framed ? 0.13 : 0,
+            padTop: framed ? 0.13 : 0,
+            padBottom: framed ? 0.1 : 0,
+            brand: framed && portrait ? 0.14 : 0,
+        };
+        box.w = Display.width * (1 + box.padX * 2);
+        box.h = Display.height * (1 + box.padTop + box.padBottom + box.brand);
+        return box;
+    },
+
+    // Automatic placement: centered above the touch controls (portrait) or in the
+    // middle (landscape). Without the frame the screen takes the full width.
+    autoScreen(W, H, inset, box) {
+        const portrait = this.orientation === 'portrait';
+        const touch = Controls.visibleTouch;
+        const margin = box.framed ? 10 : 0;
+        const availW = W - inset.left - inset.right - margin * 2;
+        let availH;
+        if (portrait) {
+            const share = box.framed ? 0.53 : 0.58;
+            availH = (touch ? H * share : H) - inset.top - margin * 2 - (touch ? 0 : inset.bottom);
+        } else {
+            availH = H - inset.top - inset.bottom - margin * 2;
+        }
+        let scale = Math.max(0.5, Math.min(availW / box.w, availH / box.h));
+        if (box.framed && this.settings.scaleMode === 'integer' && scale >= 1) {
+            scale = Math.floor(scale);
+        }
+        const totalW = box.w * scale;
+        const totalH = box.h * scale;
+        return {
+            scale,
+            left: inset.left + margin + (availW - totalW) / 2,
+            top: inset.top + margin + Math.max(0, (availH - totalH) / 2),
+        };
+    },
+
+    // Largest scale at which the screen box fits the whole viewport.
+    maxScreenScale(W, H, inset, box) {
+        return Math.max(0.5, Math.min((W - inset.left - inset.right) / box.w, (H - inset.top - inset.bottom) / box.h));
+    },
+
+    // Manual placement, saved per orientation: center (fractions of the viewport)
+    // and size (fraction of the largest scale that fits).
+    manualScreen(W, H, inset, box) {
+        const saved = (this.settings.screenLayouts || {})[this.orientation];
+        if (!saved) {
+            return null;
+        }
+        const scale = Math.max(0.5, this.maxScreenScale(W, H, inset, box) * saved.size);
+        const totalW = box.w * scale;
+        const totalH = box.h * scale;
+        const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
+        return {
+            scale,
+            left: clamp(saved.x * W - totalW / 2, inset.left, W - inset.right - totalW),
+            top: clamp(saved.y * H - totalH / 2, inset.top, H - inset.bottom - totalH),
+        };
+    },
+
+    // Stores the current automatic placement as the starting manual layout.
+    seedManualScreen() {
+        const layouts = this.settings.screenLayouts = this.settings.screenLayouts || {};
+        if (layouts[this.orientation]) {
+            return;
+        }
+        const W = this.el.app.clientWidth;
+        const H = this.el.app.clientHeight;
+        const inset = this.safeInsets();
+        const box = this.screenBox();
+        const auto = this.autoScreen(W, H, inset, box);
+        layouts[this.orientation] = {
+            x: (auto.left + box.w * auto.scale / 2) / W,
+            y: (auto.top + box.h * auto.scale / 2) / H,
+            size: Math.min(1, auto.scale / this.maxScreenScale(W, H, inset, box)),
+        };
+    },
+
     layout() {
         const W = this.el.app.clientWidth;
         const H = this.el.app.clientHeight;
@@ -161,42 +290,23 @@ const App = {
         this.orientation = W > H ? 'landscape' : 'portrait';
         this.el.app.dataset.orientation = this.orientation;
         const inset = this.safeInsets();
-        const portrait = this.orientation === 'portrait';
-        const touch = Controls.visibleTouch;
-        const framed = !!this.settings.frame;
-        const margin = framed ? 10 : 6;
-        const availW = W - inset.left - inset.right - margin * 2;
-        let availH;
-        if (portrait) {
-            availH = (touch ? H * 0.53 : H) - inset.top - margin * 2 - (touch ? 0 : inset.bottom);
-        } else {
-            availH = H - inset.top - inset.bottom - margin * 2;
-        }
-        // Bezel around the screen, as a fraction of the screen size (DMG proportions).
-        const padX = framed ? 0.13 : 0;
-        const padTop = framed ? 0.13 : 0;
-        const padBottom = framed ? 0.1 : 0;
-        const brand = framed && portrait ? 0.14 : 0;
-        const boxW = Display.width * (1 + padX * 2);
-        const boxH = Display.height * (1 + padTop + padBottom + brand);
-        let scale = Math.max(0.5, Math.min(availW / boxW, availH / boxH));
-        if (this.settings.scaleMode === 'integer' && scale >= 1) {
-            scale = Math.floor(scale);
-        }
+        const box = this.screenBox();
+        const place = (this.settings.screenMode === 'manual' && this.manualScreen(W, H, inset, box)) || this.autoScreen(W, H, inset, box);
+        const { scale } = place;
+        const boxLeft = place.left;
+        const boxTop = place.top;
         const w = Math.round(Display.width * scale);
         const h = Math.round(Display.height * scale);
-        const totalW = w * (1 + padX * 2);
-        const totalH = h * (1 + padTop + padBottom + brand);
-        const boxLeft = inset.left + margin + (availW - totalW) / 2;
-        const boxTop = inset.top + margin + Math.max(0, (availH - totalH) / 2);
-        const left = boxLeft + w * padX;
-        const top = boxTop + h * padTop;
+        const totalW = w * (1 + box.padX * 2);
+        const left = boxLeft + w * box.padX;
+        const top = boxTop + h * box.padTop;
         Object.assign(this.el.screen.style, { width: w + 'px', height: h + 'px', transform: `translate(${left}px, ${top}px)` });
         this.el.lcd.style.backgroundSize = `${scale}px ${scale}px`;
+        this.screenRect = { left: boxLeft, top: boxTop, width: box.w * scale, height: box.h * scale, scale };
 
-        this.el.bezel.hidden = !framed;
-        if (framed) {
-            const bezelH = h * (1 + padTop + padBottom);
+        this.el.bezel.hidden = !box.framed;
+        if (box.framed) {
+            const bezelH = h * (1 + box.padTop + box.padBottom);
             Object.assign(this.el.bezel.style, {
                 width: totalW + 'px',
                 height: bezelH + 'px',
@@ -204,16 +314,138 @@ const App = {
             });
             this.el.bezel.style.setProperty('--u', (h / 100) + 'px');
         }
-        this.el.brand.hidden = !brand;
-        if (brand) {
+        this.el.brand.hidden = !box.brand;
+        if (box.brand) {
             Object.assign(this.el.brand.style, {
-                transform: `translate(${boxLeft}px, ${boxTop + h * (1 + padTop + padBottom)}px)`,
+                transform: `translate(${boxLeft}px, ${boxTop + h * (1 + box.padTop + box.padBottom)}px)`,
                 width: totalW + 'px',
-                height: h * brand + 'px',
-                fontSize: h * brand * 0.5 + 'px',
+                height: h * box.brand + 'px',
+                fontSize: h * box.brand * 0.5 + 'px',
             });
         }
         Controls.render();
+    },
+
+    // ----------------------------------------------------------- screen editor
+    startScreenEditor() {
+        this.menuOpen = false;
+        this.el.menu.hidden = true;
+        this.screenEditing = true;
+        Controls.releaseAll();
+        Input.releaseAll();
+        this.el.screenEditor.hidden = false;
+        this.el.screenDrag.hidden = false;
+        this.el.app.classList.add('screen-editing');
+        this.updateScreenEditor();
+    },
+
+    stopScreenEditor() {
+        this.screenEditing = false;
+        this.screenPointers = null;
+        this.el.screenEditor.hidden = true;
+        this.el.screenDrag.hidden = true;
+        this.el.app.classList.remove('screen-editing', 'screen-auto');
+        this.openMenu('controls');
+    },
+
+    setScreenMode(mode) {
+        if (mode === 'manual') {
+            this.seedManualScreen();
+        }
+        this.settings.screenMode = mode;
+        this.saveSettings();
+        this.layout();
+        this.updateScreenEditor();
+    },
+
+    saveScreenLayout(values) {
+        const layouts = this.settings.screenLayouts = this.settings.screenLayouts || {};
+        this.seedManualScreen();
+        layouts[this.orientation] = Object.assign({}, layouts[this.orientation], values);
+        this.settings.screenMode = 'manual';
+        this.saveSettings();
+        this.layout();
+        this.updateScreenEditor();
+    },
+
+    updateScreenEditor() {
+        if (!this.screenEditing) {
+            return;
+        }
+        const manual = this.settings.screenMode === 'manual';
+        const orientationName = this.orientation === 'portrait' ? 'vertical' : 'horizontal';
+        document.getElementById('screen-editor-title').textContent = `Ajustar pantalla · modo ${orientationName}`;
+        this.el.screenEditor.querySelectorAll('[data-mode]').forEach((button) => {
+            button.classList.toggle('active', button.dataset.mode === this.settings.screenMode);
+        });
+        this.el.app.classList.toggle('screen-auto', !manual);
+        const W = this.el.app.clientWidth;
+        const H = this.el.app.clientHeight;
+        const max = this.maxScreenScale(W, H, this.safeInsets(), this.screenBox());
+        const size = Math.round(Math.min(1, this.screenRect.scale / max) * 100);
+        document.getElementById('scr-size').value = size;
+        document.getElementById('scr-size-out').textContent = size + '%';
+    },
+
+    // Dragging anywhere moves the screen; two fingers resize it.
+    screenPointer(ev) {
+        const rect = this.el.app.getBoundingClientRect();
+        return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+    },
+
+    onScreenDown(ev) {
+        ev.preventDefault();
+        try {
+            this.el.screenDrag.setPointerCapture(ev.pointerId);
+        } catch (ignored) { }
+        this.seedManualScreen();
+        this.screenPointers = this.screenPointers || new Map();
+        this.screenPointers.set(ev.pointerId, this.screenPointer(ev));
+        const layout = this.settings.screenLayouts[this.orientation];
+        const points = [...this.screenPointers.values()];
+        this.screenGesture = {
+            points: points.map((p) => Object.assign({}, p)),
+            x: layout.x,
+            y: layout.y,
+            size: layout.size,
+            distance: points.length >= 2 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0,
+        };
+    },
+
+    onScreenMove(ev) {
+        if (!this.screenPointers || !this.screenPointers.has(ev.pointerId)) {
+            return;
+        }
+        ev.preventDefault();
+        this.screenPointers.set(ev.pointerId, this.screenPointer(ev));
+        const W = this.el.app.clientWidth;
+        const H = this.el.app.clientHeight;
+        const gesture = this.screenGesture;
+        const points = [...this.screenPointers.values()];
+        if (points.length >= 2 && gesture.distance) {
+            const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+            const size = Math.min(1, Math.max(0.2, gesture.size * distance / gesture.distance));
+            this.saveScreenLayout({ size: Math.round(size * 100) / 100 });
+        } else if (points.length === 1) {
+            const start = gesture.points[0];
+            this.saveScreenLayout({
+                x: Math.min(1, Math.max(0, gesture.x + (points[0].x - start.x) / W)),
+                y: Math.min(1, Math.max(0, gesture.y + (points[0].y - start.y) / H)),
+            });
+        }
+    },
+
+    onScreenUp(ev) {
+        if (!this.screenPointers) {
+            return;
+        }
+        this.screenPointers.delete(ev.pointerId);
+        // Restart the gesture with the remaining fingers.
+        if (this.screenPointers.size) {
+            const layout = this.settings.screenLayouts[this.orientation];
+            const points = [...this.screenPointers.values()];
+            this.screenGesture = { points: points.map((p) => Object.assign({}, p)), x: layout.x, y: layout.y, size: layout.size, distance: 0 };
+        }
     },
 
     // -------------------------------------------------------------- main loop
@@ -227,7 +459,7 @@ const App = {
             this.pollCapture();
         } else {
             this.handleActions(justPressed, 'pad');
-            if (Input.pad.start && Input.pad.select && !this.menuOpen && this.engine) {
+            if (Input.pad.start && Input.pad.select && !this.menuOpen && !this.screenEditing && this.engine) {
                 this.openMenu();
             }
         }
@@ -278,6 +510,8 @@ const App = {
             if (action === 'menu') {
                 if (Controls.editing) {
                     this.stopLayoutEditor();
+                } else if (this.screenEditing) {
+                    this.stopScreenEditor();
                 } else if (this.menuOpen) {
                     this.closeMenu();
                 } else {
@@ -397,7 +631,7 @@ const App = {
     },
 
     isPaused() {
-        return this.menuOpen || Controls.editing || document.hidden;
+        return this.menuOpen || Controls.editing || this.screenEditing || document.hidden;
     },
 
     countFps(frames, now) {
@@ -875,6 +1109,17 @@ const App = {
         this.requestWakeLock();
     },
 
+    // Parent of each menu page, for the back button.
+    pageParents: {
+        library: 'games',
+        homebrew: 'games',
+        states: 'saveload',
+        savedata: 'saveload',
+        palette: 'interface',
+        skin: 'interface',
+        mapping: 'controls',
+    },
+
     showPage(page) {
         this.page = page;
         this.el.menu.dataset.page = page;
@@ -887,9 +1132,10 @@ const App = {
                 title = section.dataset.title || '';
             }
         });
-        document.getElementById('menu-title').innerHTML = title ? title : '<span class="logo">GemuBoy</span>';
+        document.getElementById('menu-title').innerHTML = title ? title : '<span class="logo">GBoy-JS</span>';
         document.getElementById('menu-back').style.visibility = page === 'main' ? 'hidden' : 'visible';
         this.el.menu.querySelector('.sheet').scrollTop = 0;
+        this.renderGameState();
         const render = {
             main: () => this.renderMain(),
             library: () => this.renderLibrary(),
@@ -906,9 +1152,15 @@ const App = {
         }
     },
 
+    // Options that need a running game are disabled until one is loaded.
+    renderGameState() {
+        const hasGame = !!this.engine;
+        this.el.menu.querySelectorAll('[data-needs-game]').forEach((el) => { el.disabled = !hasGame; });
+        this.el.menu.querySelectorAll('[data-no-game]').forEach((el) => { el.hidden = hasGame; });
+    },
+
     renderMain() {
         const hasGame = !!this.engine;
-        this.el.menu.querySelectorAll('[data-needs-game]').forEach((el) => { el.hidden = !hasGame; });
         const now = document.getElementById('now-playing');
         if (hasGame) {
             now.innerHTML = `<div class="now"><small>Jugando</small><strong></strong><span class="badge">${this.game.cgb ? 'GBC' : 'GB'}</span></div>`;
@@ -1160,7 +1412,7 @@ const App = {
         Controls.stopEditing();
         this.el.editor.hidden = true;
         this.el.app.classList.remove('editing');
-        this.openMenu();
+        this.openMenu('controls');
     },
 
     renderEditorChips() {
@@ -1258,6 +1510,26 @@ const App = {
             }
         });
 
+        this.el.settingsInput.addEventListener('change', async () => {
+            const file = this.el.settingsInput.files[0];
+            this.el.settingsInput.value = '';
+            if (file) {
+                this.importSettings(await file.text());
+            }
+        });
+
+        // Screen editor: drag / pinch on the overlay, size slider.
+        const drag = this.el.screenDrag;
+        drag.addEventListener('pointerdown', (ev) => this.onScreenDown(ev));
+        drag.addEventListener('pointermove', (ev) => this.onScreenMove(ev));
+        drag.addEventListener('pointerup', (ev) => this.onScreenUp(ev));
+        drag.addEventListener('pointercancel', (ev) => this.onScreenUp(ev));
+        drag.addEventListener('touchstart', (ev) => ev.preventDefault(), { passive: false });
+        drag.addEventListener('touchmove', (ev) => ev.preventDefault(), { passive: false });
+        document.getElementById('scr-size').addEventListener('input', (ev) => {
+            this.saveScreenLayout({ size: Number(ev.target.value) / 100 });
+        });
+
         this.el.savInput.addEventListener('change', async () => {
             const file = this.el.savInput.files[0];
             this.el.savInput.value = '';
@@ -1334,6 +1606,7 @@ const App = {
             if (Controls.editing) {
                 this.updateEditor();
             }
+            this.updateScreenEditor();
         });
         addEventListener('resize', relayout);
         addEventListener('orientationchange', () => setTimeout(relayout, 250));
@@ -1411,6 +1684,10 @@ const App = {
         if (name === 'turboMode') {
             this.turboToggled = false;
         }
+        if (name === 'screenMode' && value === 'manual') {
+            this.seedManualScreen();
+            this.saveSettings();
+        }
         this.applySettings();
         if (name === 'engine') {
             this.switchEngine();
@@ -1424,7 +1701,31 @@ const App = {
                 this.closeMenu();
                 break;
             case 'back':
-                this.showPage('main');
+                this.showPage(this.pageParents[this.page] || 'main');
+                break;
+            case 'theme':
+                this.nextTheme();
+                break;
+            case 'edit-screen':
+                this.startScreenEditor();
+                break;
+            case 'screen-mode':
+                this.setScreenMode(target.dataset.mode);
+                break;
+            case 'screen-reset':
+                if (this.settings.screenLayouts) {
+                    delete this.settings.screenLayouts[this.orientation];
+                }
+                this.setScreenMode('auto');
+                break;
+            case 'screen-done':
+                this.stopScreenEditor();
+                break;
+            case 'export-settings':
+                this.exportSettings();
+                break;
+            case 'import-settings':
+                this.el.settingsInput.click();
                 break;
             case 'page':
                 this.showPage(target.dataset.pageTarget);
@@ -1565,15 +1866,79 @@ const App = {
             this.toast('Este juego no tiene partida guardada en el cartucho', 3000);
             return;
         }
-        const blob = new Blob([sav], { type: 'application/octet-stream' });
+        this.download(new Blob([sav], { type: 'application/octet-stream' }), this.game.title + '.sav');
+    },
+
+    download(blob, filename) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = this.game.title + '.sav';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
+    },
+
+    // ------------------------------------------------------- settings backup
+    exportSettings() {
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        // ':' isn't allowed in file names on Windows, iOS or Android.
+        const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const data = { app: 'GBoy-JS', type: 'settings', version: 1, exported: now.toISOString(), settings: this.settings };
+        this.download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `GBoy-JS_Settings_${date} ${time}.json`);
+        this.toast('Ajustes exportados');
+    },
+
+    // Keeps only known settings whose type matches the default value.
+    cleanSettings(input) {
+        const clean = {};
+        for (const [key, fallback] of Object.entries(this.defaults)) {
+            const value = input[key];
+            if (value === undefined || value === null) {
+                continue;
+            }
+            const isObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
+            if (Array.isArray(fallback) ? Array.isArray(value) && value.length === fallback.length
+                : isObject(fallback) ? isObject(value) : typeof value === typeof fallback) {
+                clean[key] = value;
+            }
+        }
+        return clean;
+    },
+
+    async importSettings(text) {
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (error) {
+            this.toast('⚠️ El archivo no es un JSON válido', 4000);
+            return;
+        }
+        const input = data && typeof data.settings === 'object' ? data.settings : data;
+        const clean = input && typeof input === 'object' ? this.cleanSettings(input) : {};
+        if (!Object.keys(clean).length) {
+            this.toast('⚠️ El archivo no contiene ajustes de GBoy-JS', 4000);
+            return;
+        }
+        if (!confirm('¿Reemplazar tus ajustes actuales por los del archivo?')) {
+            return;
+        }
+        const previousEngine = this.settings.engine;
+        this.settings = Object.assign({}, this.defaults, clean);
+        this.settings.opacity = Number(this.settings.opacity);
+        this.saveSettings();
+        Input.configure(this.settings);
+        this.applyPalette();
+        this.applySettings();
+        this.redraw();
+        this.showPage(this.page);
+        this.toast('Ajustes importados');
+        if (this.settings.engine !== previousEngine) {
+            this.switchEngine();
+        }
     },
 
     async importSav(bytes) {

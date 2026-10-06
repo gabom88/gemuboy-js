@@ -1,6 +1,6 @@
 {
-    "name": "GemuBoy – Emulador de Game Boy",
-    "short_name": "GemuBoy",
+    "name": "GBoy-JS – Emulador de Game Boy",
+    "short_name": "GBoy-JS",
     "description": "Emulador de Game Boy y Game Boy Color que funciona sin conexión.",
     "id": "./",
     "start_url": "./",
