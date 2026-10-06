@@ -132,7 +132,7 @@
                     <div class="tiles">
                         <button type="button" class="tile primary" data-action="resume" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span>Continuar</span></button>
                         <button type="button" class="tile" data-action="reset" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Reiniciar</span></button>
-                        <button type="button" class="tile" data-action="page" data-page-target="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><rect x="9" y="7" width="6" height="5"/><path d="M9 16h2M13 16h2"/></svg><span>Juegos</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><rect x="9" y="7" width="6" height="5"/><path d="M9 16h2M13 16h2"/></svg><span>Juegos</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="saveload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="5"/></svg><span>Guardar / Cargar</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="interface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg><span>Interfaz</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 15h-4l-1 .6A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg><span>Controles</span></button>
@@ -140,14 +140,6 @@
                         <button type="button" class="tile" data-action="page" data-page-target="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg><span>Instalar y ayuda</span></button>
                     </div>
                     <div class="coffee"><a href="https://www.buymeacoffee.com/bardock" target="_blank" rel="noopener"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;"></a></div>
-                </section>
-
-                <section class="page" data-page="games" data-title="Juegos">
-                    <div class="list">
-                        <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
-                        <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
-                        <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
-                    </div>
                 </section>
 
                 <section class="page" data-page="saveload" data-title="Guardar / Cargar">
@@ -187,17 +179,14 @@
                             <button type="button" class="icon-btn" id="lib-view" data-action="lib-view" aria-label="Cambiar vista (lista / cuadrícula)"></button>
                         </div>
                     </div>
-                    <div class="lib-top">
-                        <p class="note" id="lib-count"></p>
-                        <button type="button" class="btn small" data-action="page" data-page-target="import">📝 Importar lista TXT</button>
-                    </div>
+                    <p class="note" id="lib-count"></p>
                     <div id="library-list" class="cards"></div>
                     <button type="button" class="btn block" data-action="lib-more" id="lib-more" hidden>Mostrar más</button>
-                    <h2>Añadir y gestionar</h2>
-                    <button type="button" class="btn primary block" data-action="open-rom">Añadir ROM…</button>
-                    <button type="button" class="btn block" data-action="page" data-page-target="import">Importar lista TXT</button>
-                    <button type="button" class="btn block" data-action="lib-download-all" id="lib-download-all">Descargar todos los visibles</button>
-                    <button type="button" class="btn block" data-action="lib-export">Exportar biblioteca (.txt)</button>
+                    <div class="lib-buttons">
+                        <button type="button" class="btn shine" data-action="import-games">Importar lista</button>
+                        <button type="button" class="btn primary" data-action="open-rom">Añadir ROM</button>
+                    </div>
+                    <button type="button" class="btn block" data-action="page" data-page-target="import">Listas TXT</button>
                     <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
                         caben, en IndexedDB). Los juegos importados de una lista se descargan la primera vez que los
                         juegas y después funcionan sin conexión.</p>

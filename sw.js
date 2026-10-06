@@ -34,6 +34,7 @@ const ASSETS = [
     'img/icon-maskable-512.png',
     'img/apple-touch-icon.png',
     'static/pocket.gb',
+    'static/pocket.png',
     // Lists in static/txt and the covers of the homebrew list.
     'static/txt/index.json',
     'static/txt/homebrew.txt',

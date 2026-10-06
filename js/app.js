@@ -26,7 +26,7 @@ const App = {
         screenLayouts: {},
         menuTheme: 'night',
         libraryView: 'list',
-        librarySort: 'played',
+        librarySort: 'added',
     },
 
     stateSlots: ['auto', '1', '2', '3', '4'],
@@ -1053,19 +1053,9 @@ const App = {
         return this.loadRom(bytes, { name, title, entryId, store: false });
     },
 
-    async startDemo() {
-        try {
-            const response = await fetch('static/pocket.gb');
-            const bytes = new Uint8Array(await response.arrayBuffer());
-            await this.loadRom(bytes, { name: 'Demo', store: false });
-            this.closeMenu();
-        } catch (error) {
-            this.toast('No se pudo cargar la demo', 4000);
-        }
-    },
-
     async boot() {
         Library.migrateHomebrew();
+        Library.seedDemo();
         const last = Store.getSync('last');
         if (last && this.library().some((item) => item.id === last && item.where)) {
             try {
@@ -1139,7 +1129,7 @@ const App = {
 
     // Parent of each menu page, for the back button.
     pageParents: {
-        library: 'games',
+        library: 'main',
         import: 'library',
         entry: 'library',
         states: 'saveload',
@@ -1198,7 +1188,7 @@ const App = {
             now.innerHTML = `<div class="now"><small>Jugando</small><strong></strong><span class="badge">${this.game.cgb ? 'GBC' : 'GB'}</span></div>`;
             now.querySelector('strong').textContent = this.game.title;
         } else {
-            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Carga un ROM o importa la lista de juegos homebrew en<br>Juegos → Biblioteca → Importar lista TXT.</p>';
+            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Abre <strong>Juegos</strong> para jugar la demo, añadir tus ROMs<br>o importar listas de juegos.</p>';
         }
     },
 
@@ -1226,7 +1216,7 @@ const App = {
     async renderTxtLists() {
         const container = document.getElementById('txt-lists');
         container.innerHTML = '<p class="note">Cargando listas…</p>';
-        const lists = (await Library.txtLists()).filter((list) => !list.error);
+        const lists = (await Library.txtLists()).filter((list) => !list.error && list.count);
         this.txtListCache = new Map(lists.map((list) => [list.file, list]));
         container.innerHTML = '';
         if (!lists.length) {
@@ -1347,14 +1337,6 @@ const App = {
         Library.view.filter = 'all';
         Library.view.query = '';
         this.showPage('library');
-    },
-
-    exportLibrary() {
-        const now = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-        this.download(new Blob([Library.exportText()], { type: 'text/plain;charset=utf-8' }), `GBoy-JS_Biblioteca_${stamp}.txt`);
-        this.toast('Biblioteca exportada');
     },
 
     // --- Screenshots (camera button in the menu header) ---
@@ -1884,9 +1866,6 @@ const App = {
             case 'open-rom':
                 this.el.romInput.click();
                 break;
-            case 'demo':
-                this.startDemo();
-                break;
             case 'reset':
                 if (confirm('¿Reiniciar el juego? Se perderá el progreso no guardado en el juego.')) {
                     if (await this.restartGame()) {
@@ -1956,11 +1935,12 @@ const App = {
                 Library.view.limit = 60;
                 this.showPage('library');
                 break;
-            case 'lib-download-all':
-                Library.downloadAll(Library.visibleIds || []);
-                break;
-            case 'lib-export':
-                this.exportLibrary();
+            case 'import-games':
+                if (await Library.importGamesList()) {
+                    Library.view.filter = 'all';
+                    Library.view.query = '';
+                    Library.render();
+                }
                 break;
             case 'lib-clear': {
                 const count = this.library().length;

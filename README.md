@@ -48,8 +48,9 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 Ya instalada se abre a pantalla completa, como una app nativa, y funciona sin conexión. También
 puedes usarla directamente en el navegador sin instalar nada.
 
-**Para empezar a jugar:** abre **Juegos → Biblioteca → Importar lista TXT**, pulsa *Usar* en la lista de juegos homebrew e importa, o usa **📂 Cargar ROM**
-para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
+**Para empezar a jugar:** abre **Juegos** (la biblioteca): ahí está la demo incluida, **Importar lista**
+(añade los juegos de `static/txt/games.txt`), **Añadir ROM** para tus archivos `.gb`, `.gbc` o `.zip` y
+**Listas TXT** para elegir otras listas, como la de 24 juegos homebrew gratuitos.
 
 ## ✨ Funciones
 
@@ -85,13 +86,15 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   editable por juego (nombre, descripción, año, género, autor, colección, URL, portada).
   - Cada juego muestra su descripción, año, género, colección, autor, licencia y un enlace a su web.
   - **Listas TXT incluidas**: todos los `.txt` de la carpeta [`static/txt`](static/txt) aparecen en
-    *Importar lista TXT → Listas TXT* para importarlos con un toque. Para añadir una lista basta con subir
-    el archivo a esa carpeta: al publicar, el workflow actualiza `static/txt/index.json`. La primera línea
+    *Juegos → Listas TXT* para importarlos con un toque; el botón amarillo **Importar lista** importa
+    directamente `static/txt/games.txt`. Para añadir una lista basta con subir
+    el archivo a esa carpeta: no hace falta editar `static/txt/index.json` (el workflow lo regenera al
+    publicar y, en local, la app también lee el listado de la carpeta). La primera línea
     `#` es el título de la lista y `#coleccion: Nombre` asigna la colección.
-  - **Importar listas TXT** (Biblioteca → Importar lista TXT): un juego por línea con
+  - **Escribir o pegar una lista** (Juegos → Listas TXT): un juego por línea con
     `nombre | url | descripción | año | género | portada`. Las fichas se crean al momento y cada ROM se
     descarga la primera vez que pulsas *Jugar*; después funciona sin conexión. Si una URL ya existe, la
-    ficha se actualiza. La biblioteca se puede exportar en el mismo formato.
+    ficha se actualiza.
   - Si un servidor no permite la descarga directa desde el navegador, la ficha ofrece abrir el enlace y
     **asignar el archivo** descargado.
   - **Portadas y capturas**: el botón de cámara del menú usa la pantalla actual como portada del juego o
