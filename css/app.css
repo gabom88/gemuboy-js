@@ -1918,7 +1918,53 @@ input[type="search"]:focus {
 }
 
 .card.lib {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.lib-main {
+    display: flex;
     align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.card.lib .desc {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.card.lib .details {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.card.lib .details a {
+    color: var(--accent-2);
+    font-weight: 600;
+}
+
+.card.lib .desc[hidden],
+.card.lib .details[hidden] {
+    display: none;
+}
+
+.lib-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0 8px;
+}
+
+.lib-top .note {
+    margin: 0;
+}
+
+.lib-top .btn {
+    flex: none;
 }
 
 .cover {
@@ -1967,9 +2013,7 @@ input[type="search"]:focus {
 }
 
 .card.lib .meta {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
 
 .status {
@@ -2058,6 +2102,24 @@ input[type="search"]:focus {
     align-items: stretch;
     gap: 6px;
     padding: 8px;
+}
+
+.lib-grid .lib-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.lib-grid .card.lib .desc {
+    font-size: 13px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+
+.lib-grid .card.lib .details {
+    font-size: 12px;
 }
 
 .lib-grid .cover {

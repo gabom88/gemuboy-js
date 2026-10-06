@@ -145,8 +145,6 @@
                 <section class="page" data-page="games" data-title="Juegos">
                     <div class="list">
                         <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
-                        <button type="button" class="item" data-action="lib-collection" data-collection="Homebrew">🆓<span>Juegos homebrew gratuitos</span></button>
-                        <button type="button" class="item" data-action="page" data-page-target="import">📝<span>Importar lista TXT</span></button>
                         <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
                         <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
                     </div>
@@ -189,7 +187,10 @@
                             <button type="button" class="icon-btn" id="lib-view" data-action="lib-view" aria-label="Cambiar vista (lista / cuadrícula)"></button>
                         </div>
                     </div>
-                    <p class="note" id="lib-count"></p>
+                    <div class="lib-top">
+                        <p class="note" id="lib-count"></p>
+                        <button type="button" class="btn small" data-action="page" data-page-target="import">📝 Importar lista TXT</button>
+                    </div>
                     <div id="library-list" class="cards"></div>
                     <button type="button" class="btn block" data-action="lib-more" id="lib-more" hidden>Mostrar más</button>
                     <h2>Añadir y gestionar</h2>
@@ -372,11 +373,13 @@
                         en localStorage.</p>
                     <div id="storage-info" class="note"></div>
 
-                    <h2>Copia de seguridad de ajustes</h2>
-                    <p class="note">Exporta tus ajustes (controles, mandos, paleta, aspecto, pantalla y tema) a un
-                        archivo .json para guardarlos o pasarlos a otro dispositivo.</p>
-                    <button type="button" class="btn block" data-action="export-settings">Exportar ajustes (.json)</button>
-                    <button type="button" class="btn block" data-action="import-settings">Importar ajustes…</button>
+                    <h2>Copia de seguridad</h2>
+                    <p class="note">Exporta tus ajustes (controles, mandos, paleta, aspecto, pantalla y tema) y tu
+                        biblioteca (fichas, colecciones, favoritos y portadas) a un archivo .json para guardarlos o
+                        pasarlos a otro dispositivo. Los ROMs no se incluyen: los juegos con URL se vuelven a descargar
+                        al jugarlos.</p>
+                    <button type="button" class="btn block" data-action="export-settings">Exportar ajustes y biblioteca (.json)</button>
+                    <button type="button" class="btn block" data-action="import-settings">Importar ajustes y biblioteca…</button>
                     <button type="button" class="btn danger block" data-action="clear-data">Borrar todos los datos</button>
                 </section>
 
