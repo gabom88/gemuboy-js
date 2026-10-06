@@ -22,6 +22,7 @@ const ASSETS = [
     'js/dpad.js',
     'js/gamepad.js',
     'js/engines.js',
+    'js/library.js',
     'js/sameboy/sameboy.js',
     'js/sameboy/sameboy.wasm',
     'js/app.js',

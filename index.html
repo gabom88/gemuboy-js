@@ -112,10 +112,20 @@
                     <button type="button" class="icon-btn" data-action="back" id="menu-back" aria-label="Atrás">‹</button>
                     <h1 id="menu-title"><span class="logo">GBoy-JS</span></h1>
                     <div class="header-actions">
-                        <button type="button" class="icon-btn" data-action="theme" id="theme-btn" aria-label="Cambiar tema de color"></button>
+                        <button type="button" class="icon-btn round-btn" data-action="capture-menu" id="camera-btn" aria-label="Captura de pantalla" aria-haspopup="true" aria-expanded="false" hidden>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+                        </button>
+                        <button type="button" class="icon-btn round-btn" data-action="theme" id="theme-btn" aria-label="Cambiar tema de color"></button>
                         <button type="button" class="icon-btn" data-action="close" id="menu-close" aria-label="Cerrar">✕</button>
                     </div>
                 </header>
+
+                <div class="popover-anchor">
+                    <div id="capture-pop" class="popover" role="menu" hidden>
+                        <button type="button" role="menuitem" data-action="shot-cover">Establecer como portada del juego</button>
+                        <button type="button" role="menuitem" data-action="shot-png">Guardar captura como PNG</button>
+                    </div>
+                </div>
 
                 <section class="page" data-page="main">
                     <div id="now-playing"></div>
@@ -135,7 +145,8 @@
                 <section class="page" data-page="games" data-title="Juegos">
                     <div class="list">
                         <button type="button" class="item" data-action="page" data-page-target="library">📚<span>Biblioteca</span></button>
-                        <button type="button" class="item" data-action="page" data-page-target="homebrew">🆓<span>Juegos homebrew gratuitos (24)</span></button>
+                        <button type="button" class="item" data-action="lib-collection" data-collection="Homebrew">🆓<span>Juegos homebrew gratuitos</span></button>
+                        <button type="button" class="item" data-action="page" data-page-target="import">📝<span>Importar lista TXT</span></button>
                         <button type="button" class="item" data-action="open-rom">📂<span>Cargar ROM (.gb, .gbc, .zip)</span></button>
                         <button type="button" class="item" data-action="demo">🕹️<span>Probar demo</span></button>
                     </div>
@@ -165,20 +176,89 @@
                 </section>
 
                 <section class="page" data-page="library" data-title="Biblioteca">
-                    <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
-                        caben, en IndexedDB) para que puedas jugar sin volver a cargarlos.</p>
+                    <div class="lib-toolbar">
+                        <input type="search" id="lib-search" placeholder="Buscar por nombre, género, autor…" autocomplete="off" aria-label="Buscar">
+                        <div class="lib-row">
+                            <select id="lib-filter" aria-label="Filtrar"></select>
+                            <select id="lib-sort" aria-label="Ordenar">
+                                <option value="played">Último jugado</option>
+                                <option value="title">Nombre (A–Z)</option>
+                                <option value="year">Año</option>
+                                <option value="added">Añadidos recientemente</option>
+                            </select>
+                            <button type="button" class="icon-btn" id="lib-view" data-action="lib-view" aria-label="Cambiar vista (lista / cuadrícula)"></button>
+                        </div>
+                    </div>
+                    <p class="note" id="lib-count"></p>
                     <div id="library-list" class="cards"></div>
+                    <button type="button" class="btn block" data-action="lib-more" id="lib-more" hidden>Mostrar más</button>
+                    <h2>Añadir y gestionar</h2>
                     <button type="button" class="btn primary block" data-action="open-rom">Añadir ROM…</button>
-                    <button type="button" class="btn block" data-action="page" data-page-target="homebrew">🆓 Juegos homebrew gratuitos</button>
+                    <button type="button" class="btn block" data-action="page" data-page-target="import">Importar lista TXT</button>
+                    <button type="button" class="btn block" data-action="lib-download-all" id="lib-download-all">Descargar todos los visibles</button>
+                    <button type="button" class="btn block" data-action="lib-export">Exportar biblioteca (.txt)</button>
+                    <p class="note">Los ROMs se guardan en el almacenamiento local del navegador (localStorage; si no
+                        caben, en IndexedDB). Los juegos importados de una lista se descargan la primera vez que los
+                        juegas y después funcionan sin conexión.</p>
                 </section>
 
-                <section class="page" data-page="homebrew" data-title="Juegos homebrew">
-                    <p class="note">24 juegos gratuitos creados por la comunidad para Game Boy, muy valorados (la
-                        mayoría con licencia libre). Al jugar uno se guarda en tu biblioteca y queda disponible sin conexión.</p>
-                    <div id="homebrew-list" class="cards"></div>
-                    <p class="note">Selección del <a href="https://hh.gbdev.io" target="_blank" rel="noopener">Homebrew
-                            Hub</a> de gbdev. Cada juego pertenece a sus autores y se distribuye bajo la licencia
-                        indicada.</p>
+                <section class="page" data-page="import" data-title="Importar lista TXT">
+                    <p class="note">Un juego por línea, con los campos separados por <code>|</code>:</p>
+                    <pre class="format">nombre | url | descripción | año | género | portada</pre>
+                    <p class="note">Solo el nombre y la URL son obligatorios (una línea con solo la URL también
+                        vale). Se acepta <code>---</code> como separador y las celdas copiadas de Excel o Google
+                        Sheets. Las líneas que empiezan por <code>#</code> son comentarios y
+                        <code>#campos: url | nombre | …</code> cambia el orden de los campos. Si una URL ya está en la
+                        biblioteca, su ficha se actualiza.</p>
+                    <label class="row"><span>Colección (opcional)</span>
+                        <input type="text" id="import-collection" class="text" placeholder="Por ejemplo: Puzles, Lista de Juan…" autocomplete="off"></label>
+                    <div class="import-editor">
+                        <pre id="import-gutter" aria-hidden="true">1</pre>
+                        <textarea id="import-text" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+                            placeholder="Pac-Man GB | https://ejemplo.com/pacman.gb | Juego de habilidad… | 2025 | Destreza"></textarea>
+                    </div>
+                    <div class="editor-actions">
+                        <button type="button" class="btn" data-action="import-file">Abrir .txt…</button>
+                        <button type="button" class="btn" data-action="import-clear">Vaciar</button>
+                    </div>
+                    <button type="button" class="btn block" data-action="import-preview">Vista previa</button>
+                    <div id="import-result"></div>
+                    <button type="button" class="btn primary block" data-action="import-apply" id="import-apply" disabled>Importar</button>
+                    <h2>Colección incluida</h2>
+                    <button type="button" class="btn block" data-action="restore-homebrew">Restaurar los juegos homebrew incluidos</button>
+                </section>
+
+                <section class="page" data-page="entry" data-title="Ficha del juego">
+                    <div class="entry-head">
+                        <div id="entry-cover" class="entry-cover"></div>
+                        <div class="entry-side">
+                            <span id="entry-status" class="status"></span>
+                            <p id="entry-help" class="note warn" hidden></p>
+                            <button type="button" class="btn primary small" data-action="entry-play">Jugar</button>
+                            <button type="button" class="btn ghost small" data-action="entry-cover-reset" id="entry-cover-reset" hidden>Quitar portada propia</button>
+                        </div>
+                    </div>
+                    <label class="row"><span>Nombre</span><input type="text" class="text" id="ef-title" maxlength="120"></label>
+                    <label class="row"><span>Descripción</span><textarea class="text" id="ef-description" rows="3" maxlength="1000"></textarea></label>
+                    <div class="row-pair">
+                        <label class="row"><span>Año</span><input type="text" class="text" id="ef-year" maxlength="60" inputmode="numeric"></label>
+                        <label class="row"><span>Género</span><input type="text" class="text" id="ef-genre" maxlength="60"></label>
+                    </div>
+                    <div class="row-pair">
+                        <label class="row"><span>Autor</span><input type="text" class="text" id="ef-author" maxlength="60"></label>
+                        <label class="row"><span>Licencia</span><input type="text" class="text" id="ef-license" maxlength="60"></label>
+                    </div>
+                    <label class="row"><span>Colección</span><input type="text" class="text" id="ef-collection" maxlength="60"></label>
+                    <label class="row"><span>URL del ROM</span><input type="url" class="text" id="ef-url" autocapitalize="off" spellcheck="false"></label>
+                    <label class="row"><span>Web del juego</span><input type="url" class="text" id="ef-web" autocapitalize="off" spellcheck="false"></label>
+                    <label class="row"><span>Portada (URL de imagen)</span><input type="url" class="text" id="ef-image" autocapitalize="off" spellcheck="false"></label>
+                    <button type="button" class="btn primary block" data-action="entry-save">Guardar cambios</button>
+                    <button type="button" class="btn block" data-action="entry-download" id="entry-download">Descargar ahora</button>
+                    <button type="button" class="btn block" data-action="entry-assign">Asignar archivo…</button>
+                    <a class="btn block" id="entry-open" target="_blank" rel="noopener noreferrer">Abrir enlace del ROM</a>
+                    <a class="btn block" id="entry-web" target="_blank" rel="noopener noreferrer">Abrir web del juego</a>
+                    <button type="button" class="btn block" data-action="entry-remove-download" id="entry-remove-download">Borrar descarga (conservar ficha)</button>
+                    <button type="button" class="btn danger block" data-action="entry-delete">Eliminar de la biblioteca</button>
                 </section>
 
                 <section class="page" data-page="states" data-title="Estados guardados">
@@ -346,6 +426,8 @@
         <input type="file" id="rom-input" hidden>
         <input type="file" id="sav-input" hidden>
         <input type="file" id="settings-input" hidden>
+        <input type="file" id="assign-input" hidden>
+        <input type="file" id="txt-input" hidden>
     </div>
 
     <script src="js/cpu.js" defer></script>
@@ -362,6 +444,7 @@
     <script src="js/dpad.js" defer></script>
     <script src="js/gamepad.js" defer></script>
     <script src="js/engines.js" defer></script>
+    <script src="js/library.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 
