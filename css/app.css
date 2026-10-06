@@ -2006,10 +2006,10 @@ input[type="search"]:focus {
     gap: 2px;
 }
 
-.card.lib .rom-info strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.card.lib .rom-info strong,
+.card.txt-list .rom-info strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .card.lib .meta {
@@ -2351,4 +2351,27 @@ a.btn.block[hidden],
 
 .help-body code {
     font-size: 12px;
+}
+
+/* Bundled TXT lists on the import page */
+.card.txt-list {
+    align-items: center;
+}
+
+.card.txt-list .rom-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.card.txt-list .desc {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.card.txt-list .desc[hidden] {
+    display: none;
 }

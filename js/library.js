@@ -102,6 +102,15 @@ const Library = {
         return /^https?:\/\/[^\s]+$/i.test(text || '');
     },
 
+    // Files of this site ("static/…"), used by the lists in static/txt.
+    isLocalPath(text) {
+        return /^static\/[\w\-.%/]+$/.test(text || '') && !text.includes('..');
+    },
+
+    isLink(text) {
+        return this.isWebUrl(text) || this.isLocalPath(text);
+    },
+
     // Images: web URLs, bundled files and data URLs only.
     safeImage(url) {
         return url && (this.isWebUrl(url) || /^static\//.test(url) || /^data:image\//.test(url)) ? url : '';
@@ -122,7 +131,8 @@ const Library = {
     // ----------------------------------------------------------- text lists
     // One game per line: "name | url | description | year | genre | cover".
     // Also accepts " --- " as separator and tabs (cells pasted from a spreadsheet).
-    // "#campos: url | nombre | …" changes the order; other "#" lines are comments.
+    // "#campos: url | nombre | …" changes the order, "#coleccion: X" sets the
+    // collection of the games without one; other "#" lines are comments.
     parse(text, collection = '') {
         const lines = String(text || '').split(/\r\n|\r|\n/);
         let order = this.defaultOrder;
@@ -144,12 +154,17 @@ const Library = {
                 }
                 return;
             }
+            const collectionLine = /^#\s*(coleccion|colección|collection)\s*:(.*)$/i.exec(line);
+            if (collectionLine) {
+                collection = collection || collectionLine[2].trim().slice(0, 60);
+                return;
+            }
             if (line.startsWith('#')) {
                 return;
             }
             const cells = this.splitLine(raw).map((cell) => this.cleanField(cell));
             const values = {};
-            if (cells.length === 1 && this.isWebUrl(cells[0])) {
+            if (cells.length === 1 && this.isLink(cells[0])) {
                 values.url = cells[0];
             } else {
                 order.forEach((field, i) => {
@@ -158,16 +173,16 @@ const Library = {
                     }
                 });
             }
-            if (!this.isWebUrl(values.url)) {
+            if (!this.isLink(values.url)) {
                 // Tolerate a URL in another column.
-                const url = cells.find((cell) => this.isWebUrl(cell) && !/\.(png|jpe?g|gif|webp)(\?|$)/i.test(cell));
+                const url = cells.find((cell) => this.isLink(cell) && !/\.(png|jpe?g|gif|webp)(\?|$)/i.test(cell));
                 if (!url) {
                     errors.push({ line: lineNo, message: 'falta una URL válida (http:// o https://)' });
                     return;
                 }
                 values.url = url;
             }
-            if (values.image && !this.isWebUrl(values.image)) {
+            if (values.image && !this.isLink(values.image)) {
                 delete values.image;
             }
             if (values.web && !this.isWebUrl(values.web)) {
@@ -286,47 +301,68 @@ const Library = {
         return lines.join('\n') + '\n';
     },
 
-    // The bundled homebrew games are a built-in collection of the library. Games
-    // added in later versions appear automatically; deleted ones don't come back
-    // unless they are restored explicitly.
-    async seedHomebrew(force = false) {
-        let catalog;
-        try {
-            catalog = await this.app.homebrewCatalog();
-        } catch (error) {
-            return 0;
-        }
-        const seeded = new Set(Store.getJSON('hbseeded', []));
+    // Earlier versions bundled the homebrew ROMs in static/homebrew; they now come
+    // from the "homebrew.txt" list, which downloads them from GitHub.
+    homebrewRoms: 'https://raw.githubusercontent.com/gabom88/gemuboy-js/4c6fec829d08c2729ec447ce08c138afa24c1db2/static/homebrew/',
+
+    migrateHomebrew() {
         const list = this.list();
-        let added = 0;
-        for (const game of catalog) {
-            if (seeded.has(game.id) && !force) {
-                continue;
-            }
-            seeded.add(game.id);
-            const values = {
-                url: 'static/homebrew/' + game.file,
-                image: 'static/homebrew/' + game.thumb,
-                title: game.title,
-                description: game.description,
-                genre: game.genre,
-                author: game.developer,
-                license: game.license,
-                web: game.url,
-                collection: 'Homebrew',
-                homebrew: game.id,
-            };
-            const existing = list.find((e) => e.homebrew === game.id || e.url === values.url);
-            if (existing) {
-                Object.assign(existing, values);
-            } else {
-                list.push(Object.assign({ id: 'hb-' + game.id, added: 0 }, values));
-                added++;
+        let changed = false;
+        for (const entry of list) {
+            const match = /^static\/homebrew\/([\w-]+\.gbc?)$/.exec(entry.url || '');
+            if (match) {
+                entry.url = this.homebrewRoms + match[1];
+                changed = true;
             }
         }
-        this.save(list);
-        Store.setJSON('hbseeded', [...seeded]);
-        return added;
+        if (changed) {
+            this.save(list);
+        }
+    },
+
+    // --------------------------------------------------- lists in static/txt
+    // static/txt/index.json lists the files (the deploy workflow regenerates it);
+    // without it, the folder listing of a local web server is read instead.
+    async txtLists() {
+        let files = [];
+        try {
+            const response = await fetch('static/txt/index.json', { cache: 'no-cache' });
+            if (response.ok) {
+                files = await response.json();
+            }
+        } catch (ignored) { }
+        if (!Array.isArray(files) || !files.length) {
+            try {
+                const response = await fetch('static/txt/', { cache: 'no-cache' });
+                const html = response.ok ? await response.text() : '';
+                files = [...html.matchAll(/href="(?:[^"]*\/)?([^"/?#]+\.txt)"/gi)].map((m) => decodeURIComponent(m[1]));
+            } catch (ignored) { }
+        }
+        files = [...new Set(files.filter((file) => typeof file === 'string' && /^[^/\\]+\.txt$/i.test(file)))];
+        return Promise.all(files.map(async (file) => {
+            const info = { file, title: file.replace(/\.txt$/i, '').replace(/[_-]+/g, ' '), description: '', count: 0 };
+            try {
+                const response = await fetch('static/txt/' + encodeURIComponent(file), { cache: 'no-cache' });
+                if (!response.ok) {
+                    throw new Error(String(response.status));
+                }
+                info.text = await response.text();
+                // The first comment line is the title, the next ones the description.
+                const comments = info.text.split(/\r?\n/)
+                    .map((line) => line.trim())
+                    .filter((line) => line.startsWith('#') && !/^#\s*(campos|fields|coleccion|colección|collection)\s*:/i.test(line))
+                    .map((line) => line.replace(/^#\s*/, ''))
+                    .filter(Boolean);
+                if (comments[0]) {
+                    info.title = comments[0];
+                }
+                info.description = comments.slice(1).join(' ');
+                info.count = this.parse(info.text).entries.length;
+            } catch (error) {
+                info.error = true;
+            }
+            return info;
+        }));
     },
 
     // ---------------------------------------------------- backup (settings JSON)
@@ -348,7 +384,7 @@ const Library = {
                 }
             }
         }
-        return { entries, covers, homebrewSeeded: Store.getJSON('hbseeded', []) };
+        return { entries, covers };
     },
 
     cleanEntry(raw) {
@@ -415,11 +451,6 @@ const Library = {
                     this.coverCache.delete(target.id);
                 }
             }
-        }
-        if (Array.isArray(data.homebrewSeeded)) {
-            const seeded = new Set(Store.getJSON('hbseeded', []));
-            data.homebrewSeeded.filter((id) => typeof id === 'string').forEach((id) => seeded.add(id));
-            Store.setJSON('hbseeded', [...seeded]);
         }
         if (!this.save(list)) {
             return null;
@@ -643,10 +674,6 @@ const Library = {
             await Promise.all(keys.slice(i, i + 50).map((key) => Store.remove(key)));
         }
         this.save([]);
-        // The bundled homebrew games stay out until restored from "Importar lista TXT".
-        const seeded = new Set(Store.getJSON('hbseeded', []));
-        list.filter((e) => e.homebrew).forEach((e) => seeded.add(e.homebrew));
-        Store.setJSON('hbseeded', [...seeded]);
         await Store.remove('last');
         this.downloads.clear();
         this.coverCache.clear();
@@ -776,7 +803,7 @@ const Library = {
             : '';
         container.innerHTML = '';
         if (!list.length) {
-            container.innerHTML = `<p class="empty">${all.length ? 'Ningún juego coincide con la búsqueda.' : 'La biblioteca está vacía. Carga un ROM o importa una lista.'}</p>`;
+            container.innerHTML = `<p class="empty">${all.length ? 'Ningún juego coincide con la búsqueda.' : 'La biblioteca está vacía. Carga un ROM o importa una lista con «Importar lista TXT» (incluye una lista de juegos homebrew gratuitos).'}</p>`;
         }
         for (const entry of list.slice(0, this.view.limit)) {
             container.appendChild(this.card(entry, grid));

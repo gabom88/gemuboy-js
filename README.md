@@ -23,7 +23,7 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/portrait.png" width="220" alt="Jugando en vertical"><br><sub>Jugando en vertical</sub></td>
-    <td align="center"><img src="docs/screenshots/homebrew.png" width="220" alt="Juegos homebrew gratuitos"><br><sub>24 juegos homebrew gratis</sub></td>
+    <td align="center"><img src="docs/screenshots/homebrew.png" width="220" alt="Juegos homebrew gratuitos"><br><sub>Lista de 24 juegos homebrew gratis</sub></td>
     <td align="center"><img src="docs/screenshots/editor.png" width="220" alt="Editor de controles"><br><sub>Editor de controles táctiles</sub></td>
   </tr>
   <tr>
@@ -48,7 +48,7 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 Ya instalada se abre a pantalla completa, como una app nativa, y funciona sin conexión. También
 puedes usarla directamente en el navegador sin instalar nada.
 
-**Para empezar a jugar:** abre **Juegos → Biblioteca** y elige uno de los juegos homebrew incluidos, o **📂 Cargar ROM**
+**Para empezar a jugar:** abre **Juegos → Biblioteca → Importar lista TXT**, pulsa *Usar* en la lista de juegos homebrew e importa, o usa **📂 Cargar ROM**
 para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
 
 ## ✨ Funciones
@@ -75,14 +75,19 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   - Exportar e importar partidas `.sav`.
 - 🗄️ **localStorage**: se guardan tus ajustes y los **ROMs** (comprimidos). Si un ROM no cabe, se
   guarda automáticamente en IndexedDB.
-- 🆓 **24 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
+- 🆓 **Lista de 24 juegos homebrew gratuitos** muy valorados (Tobu Tobu Girl Deluxe, µCity, Porklike GB,
   Dawn Will Come, Shock Lobster, Super JetPak DX, Deadeus, DMG Deals Damage…), la mayoría con
-  licencias libres. Al jugar uno se guarda en tu biblioteca y
-  funciona sin conexión. Créditos y licencias en [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
+  licencias libres, lista para importar en la biblioteca. Los ROMs no se incluyen en la app: se descargan
+  de GitHub al jugarlos y después funcionan sin conexión. Créditos y licencias en
+  [`static/homebrew/LICENSES.md`](static/homebrew/LICENSES.md).
 - 📚 **Biblioteca personalizable**: buscador, filtros (descargados, favoritos, colección, género),
   orden por último jugado, nombre, año o fecha, vista en lista o cuadrícula de portadas y una ficha
   editable por juego (nombre, descripción, año, género, autor, colección, URL, portada).
   - Cada juego muestra su descripción, año, género, colección, autor, licencia y un enlace a su web.
+  - **Listas TXT incluidas**: todos los `.txt` de la carpeta [`static/txt`](static/txt) aparecen en
+    *Importar lista TXT → Listas TXT* para importarlos con un toque. Para añadir una lista basta con subir
+    el archivo a esa carpeta: al publicar, el workflow actualiza `static/txt/index.json`. La primera línea
+    `#` es el título de la lista y `#coleccion: Nombre` asigna la colección.
   - **Importar listas TXT** (Biblioteca → Importar lista TXT): un juego por línea con
     `nombre | url | descripción | año | género | portada`. Las fichas se crean al momento y cada ROM se
     descarga la primera vez que pulsas *Jugar*; después funciona sin conexión. Si una URL ya existe, la
@@ -92,8 +97,7 @@ para abrir tus propios archivos `.gb`, `.gbc` o `.zip`.
   - **Portadas y capturas**: el botón de cámara del menú usa la pantalla actual como portada del juego o
     la guarda como PNG; también puedes usar la miniatura de un estado guardado.
   - Carga de `.gb`, `.gbc` y `.zip` desde el dispositivo.
-  - **Eliminar toda la biblioteca** (ROMs, portadas y estados; las partidas `.sav` se conservan). Los juegos
-    homebrew incluidos se pueden restaurar desde *Importar lista TXT*.
+  - **Eliminar toda la biblioteca** (ROMs, portadas y estados; las partidas `.sav` se conservan).
 - 🎮 **Mandos Bluetooth/USB y teclado configurables**: asigna cada botón (A, B, Start, Select, cruceta,
   turbo, menú y guardar/cargar estado) a la tecla o al botón del mando que quieras. Funciona con mandos
   Xbox, PlayStation, Switch Pro, 8BitDo, MFi y con mandos Bluetooth en modo teclado.

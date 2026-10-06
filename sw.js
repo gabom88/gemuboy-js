@@ -34,8 +34,9 @@ const ASSETS = [
     'img/icon-maskable-512.png',
     'img/apple-touch-icon.png',
     'static/pocket.gb',
-    // Homebrew catalog (ROMs are cached on first play and saved in the library).
-    'static/homebrew/catalog.json',
+    // Lists in static/txt and the covers of the homebrew list.
+    'static/txt/index.json',
+    'static/txt/homebrew.txt',
     'static/homebrew/tobutobugirldeluxe.png',
     'static/homebrew/ucity.png',
     'static/homebrew/porklike-gb.png',

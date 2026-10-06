@@ -205,6 +205,12 @@
                 </section>
 
                 <section class="page" data-page="import" data-title="Importar lista TXT">
+                    <h2>Listas TXT</h2>
+                    <p class="note">Listas incluidas en GBoy-JS. Pulsa «Usar» para cargarla en el editor, revisa la vista
+                        previa y pulsa Importar.</p>
+                    <div id="txt-lists" class="cards"></div>
+
+                    <h2>Escribir o pegar una lista</h2>
                     <p class="note">Un juego por línea, con los campos separados por <code>|</code>:</p>
                     <pre class="format">nombre | url | descripción | año | género | portada</pre>
                     <details class="help">
@@ -249,8 +255,6 @@
                     <button type="button" class="btn block" data-action="import-preview">Vista previa</button>
                     <div id="import-result"></div>
                     <button type="button" class="btn primary block" data-action="import-apply" id="import-apply" disabled>Importar</button>
-                    <h2>Colección incluida</h2>
-                    <button type="button" class="btn block" data-action="restore-homebrew">Restaurar los juegos homebrew incluidos</button>
                 </section>
 
                 <section class="page" data-page="entry" data-title="Ficha del juego">

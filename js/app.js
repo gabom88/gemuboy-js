@@ -1065,7 +1065,7 @@ const App = {
     },
 
     async boot() {
-        await Library.seedHomebrew();
+        Library.migrateHomebrew();
         const last = Store.getSync('last');
         if (last && this.library().some((item) => item.id === last && item.where)) {
             try {
@@ -1198,7 +1198,7 @@ const App = {
             now.innerHTML = `<div class="now"><small>Jugando</small><strong></strong><span class="badge">${this.game.cgb ? 'GBC' : 'GB'}</span></div>`;
             now.querySelector('strong').textContent = this.game.title;
         } else {
-            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Carga un ROM o prueba los juegos homebrew gratuitos.</p>';
+            now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Carga un ROM o importa la lista de juegos homebrew en<br>Juegos → Biblioteca → Importar lista TXT.</p>';
         }
     },
 
@@ -1208,25 +1208,6 @@ const App = {
 
     formatDate(time) {
         return new Date(time).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' });
-    },
-
-    // --- Free homebrew catalog (bundled in static/homebrew) ---
-    async homebrewCatalog() {
-        if (!this.catalog) {
-            const response = await fetch('static/homebrew/catalog.json');
-            if (!response.ok) {
-                throw new Error('catalog ' + response.status);
-            }
-            this.catalog = await response.json();
-        }
-        return this.catalog;
-    },
-
-    // Plays a bundled homebrew game (they live in the library as the "Homebrew" collection).
-    async playHomebrew(id) {
-        await Library.seedHomebrew();
-        const entry = this.library().find((item) => item.homebrew === id);
-        return entry ? Library.play(entry.id) : false;
     },
 
     // --- Import page ---
@@ -1241,7 +1222,52 @@ const App = {
         gutter.scrollTop = text.scrollTop;
     },
 
+    // Lists bundled in static/txt, ready to import.
+    async renderTxtLists() {
+        const container = document.getElementById('txt-lists');
+        container.innerHTML = '<p class="note">Cargando listas…</p>';
+        const lists = (await Library.txtLists()).filter((list) => !list.error);
+        this.txtListCache = new Map(lists.map((list) => [list.file, list]));
+        container.innerHTML = '';
+        if (!lists.length) {
+            container.innerHTML = '<p class="note">No hay listas disponibles.</p>';
+            return;
+        }
+        for (const list of lists) {
+            const card = document.createElement('div');
+            card.className = 'card txt-list';
+            card.innerHTML = `
+                <div class="rom-info">
+                    <strong></strong>
+                    <small class="meta"></small>
+                    <p class="desc"></p>
+                </div>
+                <button type="button" class="btn primary small" data-action="txt-load">Usar</button>`;
+            card.querySelector('strong').textContent = list.title;
+            card.querySelector('.meta').textContent = `${list.file} · ${list.count} juegos`;
+            const desc = card.querySelector('.desc');
+            desc.textContent = list.description;
+            desc.hidden = !list.description;
+            card.querySelector('button').dataset.file = list.file;
+            container.appendChild(card);
+        }
+    },
+
+    // Puts a bundled list in the editor and shows its preview.
+    loadTxtList(file) {
+        const list = this.txtListCache && this.txtListCache.get(file);
+        if (!list) {
+            return;
+        }
+        document.getElementById('import-text').value = list.text;
+        document.getElementById('import-collection').value = '';
+        this.updateImportGutter();
+        this.previewImport();
+        document.getElementById('import-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+
     renderImport() {
+        this.renderTxtLists();
         this.updateImportGutter();
         document.getElementById('import-result').innerHTML = '';
         document.getElementById('import-apply').disabled = true;
@@ -1898,11 +1924,6 @@ const App = {
                 this.renderMapping();
                 this.toast('Controles restablecidos');
                 break;
-            case 'play-homebrew':
-                if (await this.playHomebrew(target.dataset.id)) {
-                    this.closeMenu();
-                }
-                break;
             case 'lib-play':
                 if (await Library.play(target.dataset.id)) {
                     this.closeMenu();
@@ -1968,11 +1989,9 @@ const App = {
             case 'import-apply':
                 this.applyImport();
                 break;
-            case 'restore-homebrew': {
-                const added = await Library.seedHomebrew(true);
-                this.toast(added ? `${added} juegos homebrew restaurados` : 'Los juegos homebrew ya están en la biblioteca');
+            case 'txt-load':
+                this.loadTxtList(target.dataset.file);
                 break;
-            }
             case 'entry-play':
                 if (await Library.play(Library.editingId)) {
                     this.closeMenu();
