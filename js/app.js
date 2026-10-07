@@ -396,6 +396,7 @@ const App = {
         const size = Math.round(Math.min(1, this.screenRect.scale / max) * 100);
         document.getElementById('scr-size').value = size;
         document.getElementById('scr-size-out').textContent = size + '%';
+        document.getElementById('scr-frame').checked = !!this.settings.frame;
     },
 
     // Dragging anywhere moves the screen; two fingers resize it.
@@ -1779,10 +1780,14 @@ const App = {
             });
         }
 
-        document.getElementById('frame-toggle').addEventListener('change', (ev) => {
-            this.settings.frame = ev.target.checked;
-            this.saveSettings();
-            this.applySettings();
+        // The frame can be toggled from "Aspecto de la consola" and from the screen editor.
+        ['frame-toggle', 'scr-frame'].forEach((id) => {
+            document.getElementById(id).addEventListener('change', (ev) => {
+                this.settings.frame = ev.target.checked;
+                this.saveSettings();
+                this.applySettings();
+                this.updateScreenEditor();
+            });
         });
         addEventListener('gamepaddisconnected', () => {
             if (this.page === 'mapping') {

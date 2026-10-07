@@ -860,6 +860,24 @@ body {
     display: block;
 }
 
+/* Same light sweep as "Importar lista" */
+.coffee a {
+    position: relative;
+}
+
+.coffee a::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -60%;
+    width: 40%;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent);
+    transform: skewX(-20deg);
+    animation: shine 2.8s ease-in-out infinite;
+}
+
 .icon-btn svg {
     width: 20px;
     height: 20px;
@@ -1582,6 +1600,22 @@ a.btn {
 #app.led-on .bz-led b {
     background: var(--led);
     box-shadow: 0 0 calc(var(--u) * 2) var(--led), inset 0 -1px 2px rgba(0, 0, 0, .3);
+}
+
+/* The power LED glows softly, like the real one. */
+#app.led-on .bz-led b {
+    animation: led-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes led-glow {
+    0%, 100% {
+        filter: brightness(1);
+        box-shadow: 0 0 calc(var(--u) * 1.6) var(--led), inset 0 -1px 2px rgba(0, 0, 0, .3);
+    }
+    50% {
+        filter: brightness(1.25);
+        box-shadow: 0 0 calc(var(--u) * 3.2) var(--led), 0 0 calc(var(--u) * 1) var(--led), inset 0 -1px 2px rgba(0, 0, 0, .2);
+    }
 }
 
 .bz-led span {
@@ -2401,6 +2435,11 @@ a.btn.block[hidden],
 }
 
 @media (prefers-reduced-motion: reduce) {
+    #app.led-on .bz-led b {
+        animation: none;
+    }
+
+    .coffee a::after,
     .btn.shine::after {
         animation: none;
         display: none;
