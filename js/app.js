@@ -5,7 +5,7 @@ const App = {
         customPalette: ['#e0f8d0', '#88c070', '#346856', '#081820'],
         volume: 60,
         muted: false,
-        ignoreSilentSwitch: false,
+        ignoreSilentSwitch: true,
         vibration: true,
         touchControls: 'auto',
         opacity: 100,
@@ -44,6 +44,12 @@ const App = {
     init() {
         this.settings = Object.assign({}, this.defaults, Store.getJSON('settings', {}));
         this.settings.opacity = Number(this.settings.opacity);
+        // v2: sound plays even with the iPhone in silent mode (the old default kept
+        // games mute on iPhones with the silent switch or Action button on).
+        if ((this.settings.audioVersion || 1) < 2) {
+            this.settings.ignoreSilentSwitch = true;
+            this.settings.audioVersion = 2;
+        }
         Analytics.init(this.settings);
         this.isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
         this.isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -170,10 +176,9 @@ const App = {
         this.el.lcd.hidden = !s.lcdEffect;
         this.el.fps.hidden = !s.showFps;
         this.updateVolume();
-        if (navigator.audioSession) {
-            try {
-                navigator.audioSession.type = s.ignoreSilentSwitch ? 'playback' : 'auto';
-            } catch (ignored) { }
+        this.applyAudioSession();
+        if (this.silentAudio && !s.ignoreSilentSwitch) {
+            this.silentAudio.pause();
         }
         this.layout();
     },
@@ -1095,20 +1100,119 @@ const App = {
     },
 
     // ------------------------------------------------------------------- audio
+    // Called on every touch, click and key press. iOS only lets audio start (or
+    // come back after switching apps) inside a user gesture, so each gesture
+    // resumes it, re-primes it and, if iOS left it stuck, rebuilds it.
     unlockAudio() {
+        this.applyAudioSession();
         const ctx = Sound.ctx;
-        if (ctx.state !== 'running') {
-            ctx.resume().catch(() => {});
-            if (!this.audioPrimed) {
-                // Playing a silent buffer inside a user gesture unlocks audio on iOS.
-                this.audioPrimed = true;
-                try {
-                    const source = ctx.createBufferSource();
-                    source.buffer = ctx.createBuffer(1, 1, 22050);
-                    source.connect(ctx.destination);
-                    source.start(0);
-                } catch (ignored) { }
+        if (ctx.state === 'running') {
+            return;
+        }
+        if (ctx.state === 'closed') {
+            this.recreateAudio();
+            return;
+        }
+        ctx.resume().catch(() => {});
+        // A silent buffer played inside the gesture wakes up audio on iOS.
+        try {
+            const source = ctx.createBufferSource();
+            source.buffer = ctx.createBuffer(1, 1, 22050);
+            source.connect(ctx.destination);
+            source.start(0);
+        } catch (ignored) { }
+        this.playSilentLoop();
+        clearTimeout(this.audioCheck);
+        this.audioCheck = setTimeout(() => {
+            if (Sound.ctx === ctx && ctx.state !== 'running' && this.engine) {
+                // Still "interrupted" after a gesture: start over with a new context.
+                this.recreateAudio();
             }
+        }, 400);
+    },
+
+    // Replaces the AudioContext (iOS sometimes never resumes the old one).
+    recreateAudio() {
+        const old = Sound.ctx;
+        try {
+            Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (error) {
+            return;
+        }
+        this.watchAudio();
+        if (this.engine && this.engine.reconnectAudio) {
+            this.engine.reconnectAudio();
+        }
+        if (old.state !== 'closed') {
+            old.close().catch(() => {});
+        }
+        Sound.ctx.resume().catch(() => {});
+        try {
+            const source = Sound.ctx.createBufferSource();
+            source.buffer = Sound.ctx.createBuffer(1, 1, 22050);
+            source.connect(Sound.ctx.destination);
+            source.start(0);
+        } catch (ignored) { }
+        this.updateVolume();
+    },
+
+    watchAudio() {
+        Sound.ctx.onstatechange = () => {
+            if (Sound.ctx.state !== 'running' && !document.hidden && this.running && !this.isPaused()) {
+                this.toast('🔇 Toca la pantalla para reactivar el sonido', 3000);
+            }
+        };
+    },
+
+    // iOS 17+: "playback" makes sound play even with the ringer in silent mode.
+    applyAudioSession() {
+        if (navigator.audioSession) {
+            try {
+                const type = this.settings.ignoreSilentSwitch ? 'playback' : 'auto';
+                if (navigator.audioSession.type !== type) {
+                    navigator.audioSession.type = type;
+                }
+            } catch (ignored) { }
+        }
+    },
+
+    // Older iOS without navigator.audioSession: a looping silent <audio> element
+    // switches the page to the media audio category, which ignores silent mode.
+    playSilentLoop() {
+        if (!this.isIOS || navigator.audioSession || !this.settings.ignoreSilentSwitch) {
+            if (this.silentAudio) {
+                this.silentAudio.pause();
+            }
+            return;
+        }
+        if (!this.silentAudio) {
+            const rate = 8000;
+            const samples = rate / 2;
+            const bytes = new Uint8Array(44 + samples);
+            const view = new DataView(bytes.buffer);
+            const text = (offset, value) => [...value].forEach((c, i) => { bytes[offset + i] = c.charCodeAt(0); });
+            text(0, 'RIFF');
+            view.setUint32(4, 36 + samples, true);
+            text(8, 'WAVEfmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, rate, true);
+            view.setUint32(28, rate, true);
+            view.setUint16(32, 1, true);
+            view.setUint16(34, 8, true);
+            text(36, 'data');
+            view.setUint32(40, samples, true);
+            bytes.fill(128, 44);
+            const audio = document.createElement('audio');
+            audio.src = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+            audio.loop = true;
+            audio.setAttribute('playsinline', '');
+            audio.setAttribute('x-webkit-airplay', 'deny');
+            this.silentAudio = audio;
+        }
+        if (this.silentAudio.paused) {
+            this.silentAudio.play().catch(() => {});
         }
     },
 
@@ -1517,7 +1621,7 @@ const App = {
             }
         });
         this.updateOutputs();
-        document.getElementById('row-silent-switch').hidden = !navigator.audioSession;
+        document.getElementById('row-silent-switch').hidden = !navigator.audioSession && !this.isIOS;
         this.renderStorageInfo();
     },
 
@@ -1790,7 +1894,8 @@ const App = {
         });
 
         // Audio unlock on any gesture (iOS requires touchend / click).
-        ['touchend', 'click', 'keydown'].forEach((type) => {
+        this.watchAudio();
+        ['touchend', 'pointerup', 'click', 'keydown'].forEach((type) => {
             document.addEventListener(type, () => this.unlockAudio(), { passive: true });
         });
 
@@ -1806,6 +1911,13 @@ const App = {
                 if (Sound.ctx.state !== 'running' && !this.menuOpen) {
                     Sound.ctx.resume().catch(() => {});
                 }
+                // Coming back from another app: if iOS kept the audio stopped,
+                // the next touch brings it back (see unlockAudio).
+                setTimeout(() => {
+                    if (Sound.ctx.state !== 'running' && this.running && !this.isPaused()) {
+                        this.toast('🔇 Toca la pantalla para reactivar el sonido', 3000);
+                    }
+                }, 600);
             }
         });
         addEventListener('pagehide', () => this.persistNow());
