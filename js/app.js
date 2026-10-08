@@ -1611,6 +1611,10 @@ const App = {
     bindEvents() {
         const menu = this.el.menu;
         document.addEventListener('click', (ev) => {
+            const tracked = ev.target.closest('a[data-track]');
+            if (tracked) {
+                Analytics.event('link_click', { link: tracked.dataset.track });
+            }
             if (!this.el.capturePop.hidden && !ev.target.closest('#capture-pop, #camera-btn')) {
                 this.toggleCapturePop(false);
             }
