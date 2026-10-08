@@ -6,6 +6,7 @@ const App = {
         volume: 60,
         muted: false,
         ignoreSilentSwitch: true,
+        audioOutput: 'auto',
         vibration: true,
         touchControls: 'auto',
         opacity: 100,
@@ -696,38 +697,52 @@ const App = {
         }
     },
 
-    saveSram(quiet) {
+    // Cartridge saves go to IndexedDB. When the app may be closing (sync), a copy
+    // is also written synchronously to localStorage ("pending:"), because iOS
+    // can kill the page before an IndexedDB write finishes; it moves to
+    // IndexedDB on the next start (flushPending).
+    saveSram(quiet, { sync = false } = {}) {
         const engine = this.engine;
         if (!engine || !this.game || !engine.hasSaveData()) {
             return;
         }
-        let ok = true;
+        const id = this.game.id;
         const battery = engine.getBattery();
-        if (battery) {
-            ok = Store.setSync('sram:' + this.game.id, Bytes.toBase64(battery)) && ok;
-        }
         const rtc = engine.getRtc();
-        if (rtc) {
-            ok = Store.setJSON('rtc:' + this.game.id, rtc) && ok;
-        }
         engine.markClean();
-        if (!ok) {
-            this.toast('⚠️ No se pudo guardar la partida: almacenamiento lleno', 4000);
+        if (rtc) {
+            Store.setJSON('rtc:' + id, rtc);
+        }
+        if (!battery) {
             return;
         }
-        if (!quiet) {
-            this.flashSaveIndicator();
-        }
+        const text = Bytes.toBase64(battery);
+        const pendingKey = 'pending:sram:' + id;
+        const pending = sync && Store.setSync(pendingKey, text);
+        Store.put('sram:' + id, text).then(() => {
+            if (pending && Store.getSync(pendingKey) === text) {
+                Store.remove(pendingKey);
+            }
+            if (!quiet) {
+                this.flashSaveIndicator();
+            }
+            this.checkStorage();
+        }).catch((error) => {
+            console.error(error);
+            if (!pending) {
+                this.toast('⚠️ No se pudo guardar la partida: almacenamiento lleno. Libera espacio en Ajustes → Almacenamiento.', 5000);
+            }
+        });
     },
 
     // Battery saves are shared by both engines: raw cartridge RAM (SameBoy appends
     // the real-time clock in the standard .sav layout; the legacy core ignores it).
-    loadSram(engine, game) {
+    async loadSram(engine, game) {
         if (!engine.hasSaveData()) {
             return;
         }
         let ram = null;
-        const stored = Store.getSync('sram:' + game.id);
+        const stored = Store.getSync('pending:sram:' + game.id) || await Store.get('sram:' + game.id);
         if (stored) {
             ram = Bytes.fromBase64(stored);
         } else {
@@ -750,6 +765,22 @@ const App = {
         engine.markClean();
     },
 
+    // Emergency copies left in localStorage by a closed app move to IndexedDB.
+    async flushPending() {
+        for (const key of Store.localKeys('pending:')) {
+            const value = Store.getSync(key);
+            const target = key.slice('pending:'.length);
+            try {
+                if (value !== null) {
+                    await Store.idbPut(target, value);
+                }
+                await Store.remove(key);
+            } catch (error) {
+                break;
+            }
+        }
+    },
+
     flashSaveIndicator() {
         const indicator = this.el.saveIndicator;
         indicator.classList.remove('show');
@@ -761,47 +792,70 @@ const App = {
         return `state:${this.game.id}:${slot}`;
     },
 
+    // States are compressed in IndexedDB. With sync (the app may be closing) an
+    // uncompressed copy also goes to localStorage, as with cartridge saves.
     async saveState(slot, { quiet = false, sync = false } = {}) {
         if (!this.engine || !this.running) {
             return false;
         }
+        const id = this.game.id;
         const data = JSON.stringify({ time: Date.now(), engine: this.engine.id, state: this.engine.captureState() });
         let thumb = null;
         try {
             thumb = this.el.canvas.toDataURL('image/png');
         } catch (ignored) { }
         const key = this.stateKey(slot);
+        const pendingKey = 'pending:' + key;
         try {
-            if (sync) {
-                if (!Store.setSync(key, data)) {
-                    Store.put(key, data);
-                }
-            } else {
-                await Store.put(key, data);
+            if (sync && Store.setSync(pendingKey, data)) {
+                Store.setJSON(`statemeta:${id}:${slot}`, { time: Date.now() });
+            }
+            await Store.put(key, await Bytes.packText(data));
+            if (sync && Store.getSync(pendingKey) === data) {
+                Store.remove(pendingKey);
             }
             if (thumb) {
-                Store.setSync(`thumb:${this.game.id}:${slot}`, thumb);
+                await Store.put(`thumb:${id}:${slot}`, thumb);
             }
-            Store.setJSON(`statemeta:${this.game.id}:${slot}`, { time: Date.now() });
+            Store.setJSON(`statemeta:${id}:${slot}`, { time: Date.now() });
             if (!quiet) {
                 this.toast(slot === 'auto' ? 'Estado guardado' : `Estado guardado en ranura ${slot}`);
                 Analytics.event('state_save', { slot, game_title: this.game.title });
             }
+            if (slot === 'auto') {
+                this.pruneAutosaves();
+            }
+            this.checkStorage();
             return true;
         } catch (error) {
             console.error(error);
             if (!quiet) {
-                this.toast('⚠️ No se pudo guardar el estado', 4000);
+                this.toast('⚠️ No se pudo guardar el estado: almacenamiento lleno. Libera espacio en Ajustes → Almacenamiento.', 5000);
             }
             return false;
         }
+    },
+
+    async readState(romId, slot) {
+        const key = `state:${romId}:${slot}`;
+        const text = Store.getSync('pending:' + key) || await Store.get(key);
+        return text ? Bytes.unpackText(text) : null;
+    },
+
+    async hasState(romId, slot) {
+        return Store.getSync(`pending:state:${romId}:${slot}`) !== null || !!(await Store.where(`state:${romId}:${slot}`));
     },
 
     async loadState(slot, { quiet = false } = {}) {
         if (!this.engine) {
             return false;
         }
-        const text = await Store.get(this.stateKey(slot));
+        let text;
+        try {
+            text = await this.readState(this.game.id, slot);
+        } catch (error) {
+            text = null;
+        }
         if (!text) {
             if (!quiet) {
                 this.toast('Esta ranura está vacía');
@@ -830,10 +884,33 @@ const App = {
         }
     },
 
+    async removeStates(romId, slots = this.stateSlots) {
+        for (const slot of slots) {
+            await Store.remove(`state:${romId}:${slot}`);
+            await Store.remove(`pending:state:${romId}:${slot}`);
+            await Store.remove(`thumb:${romId}:${slot}`);
+            await Store.remove(`statemeta:${romId}:${slot}`);
+        }
+    },
+
     async deleteState(slot) {
-        await Store.remove(this.stateKey(slot));
-        await Store.remove(`thumb:${this.game.id}:${slot}`);
-        await Store.remove(`statemeta:${this.game.id}:${slot}`);
+        await this.removeStates(this.game.id, [slot]);
+    },
+
+    // Only the autosaves of the 10 most recently played games are kept (manual
+    // slots are never touched).
+    async pruneAutosaves(keep = 10, { all = false } = {}) {
+        const current = this.game && this.game.id;
+        const autos = Store.localKeys('statemeta:')
+            .filter((key) => key.endsWith(':auto'))
+            .map((key) => ({ romId: key.slice('statemeta:'.length, -':auto'.length), time: (Store.getJSON(key, {}) || {}).time || 0 }))
+            .filter((item) => item.romId !== current)
+            .sort((a, b) => b.time - a.time);
+        const remove = all ? autos : autos.slice(Math.max(0, keep - 1));
+        for (const item of remove) {
+            await this.removeStates(item.romId, ['auto']);
+        }
+        return remove.length;
     },
 
     // Called whenever the app may be closed or killed (iOS kills background PWAs).
@@ -841,7 +918,7 @@ const App = {
         if (!this.engine || !this.running) {
             return;
         }
-        this.saveSram(true);
+        this.saveSram(true, { sync: true });
         if (this.settings.autoState) {
             this.saveState('auto', { quiet: true, sync: true });
         }
@@ -849,11 +926,11 @@ const App = {
 
     // -------------------------------------------------------------------- ROMs
     library() {
-        return Store.getJSON('roms', []);
+        return Library.list();
     },
 
     setLibrary(list) {
-        Store.setJSON('roms', list);
+        Library.save(list);
     },
 
     romInfo(rom) {
@@ -904,7 +981,7 @@ const App = {
         this.accumulator = 0;
         this.lastAutoState = 0;
         this.turboToggled = false;
-        this.loadSram(engine, info);
+        await this.loadSram(engine, info);
         engine.setPalette(this.settings);
         this.updateVolume();
         this.running = true;
@@ -977,7 +1054,8 @@ const App = {
                     this.setLibrary(updated);
                     Analytics.event('rom_add', { game_title: info.title, system: info.cgb ? 'GBC' : 'GB' });
                 }
-                this.toast(where === 'localStorage' ? 'ROM guardado en el dispositivo' : 'ROM guardado (IndexedDB)');
+                this.toast('ROM guardado en el dispositivo');
+                this.checkStorage();
             } catch (error) {
                 console.error(error);
                 this.toast('⚠️ No hay espacio para guardar el ROM', 4000);
@@ -1010,7 +1088,7 @@ const App = {
         }
         const bytes = await Bytes.unpack(packed);
         let state = null;
-        if (resume && this.settings.autoState && await Store.where(`state:${Library.romId(entry)}:auto`)) {
+        if (resume && this.settings.autoState && await this.hasState(Library.romId(entry), 'auto')) {
             state = 'auto';
         }
         return this.loadRom(bytes, { name: entry.name, title: entry.title, store: false, state, entryId: id });
@@ -1025,11 +1103,7 @@ const App = {
         await Store.remove('cover:' + id);
         Library.coverCache.delete(id);
         Library.downloads.delete(id);
-        for (const slot of this.stateSlots) {
-            await Store.remove(`state:${romId}:${slot}`);
-            await Store.remove(`thumb:${romId}:${slot}`);
-            await Store.remove(`statemeta:${romId}:${slot}`);
-        }
+        await this.removeStates(romId);
         this.setLibrary(this.library().filter((item) => item.id !== id));
         if (Store.getSync('last') === id && (!this.game || this.game.entryId === id)) {
             await Store.remove('last');
@@ -1085,6 +1159,11 @@ const App = {
     },
 
     async boot() {
+        // Move big data from earlier versions (and emergency copies left by a
+        // closed app) to IndexedDB before anything reads it.
+        await Store.migrate().catch(() => 0);
+        await this.flushPending();
+        await Library.load();
         Library.migrateHomebrew();
         Library.seedDemo();
         const last = Store.getSync('last');
@@ -1105,6 +1184,9 @@ const App = {
     // resumes it, re-primes it and, if iOS left it stuck, rebuilds it.
     unlockAudio() {
         this.applyAudioSession();
+        if (this.mediaEl && Sound.output && this.mediaEl.paused) {
+            this.mediaEl.play().catch(() => {});
+        }
         const ctx = Sound.ctx;
         if (ctx.state === 'running') {
             return;
@@ -1140,9 +1222,7 @@ const App = {
             return;
         }
         this.watchAudio();
-        if (this.engine && this.engine.reconnectAudio) {
-            this.engine.reconnectAudio();
-        }
+        this.setupAudioOutput();
         if (old.state !== 'closed') {
             old.close().catch(() => {});
         }
@@ -1154,6 +1234,44 @@ const App = {
             source.start(0);
         } catch (ignored) { }
         this.updateVolume();
+    },
+
+    // "media": the sound goes through an <audio> element (a MediaStream), the
+    // channel iOS uses for music and video. It plays on iPhones where Web Audio
+    // stays silent, at the cost of a little more latency. "auto" uses it on iOS.
+    audioMode() {
+        const mode = this.settings.audioOutput;
+        const supported = typeof Sound.ctx.createMediaStreamDestination === 'function';
+        if (mode === 'media' || (mode === 'auto' && this.isIOS)) {
+            return supported ? 'media' : 'direct';
+        }
+        return 'direct';
+    },
+
+    setupAudioOutput() {
+        if (this.audioMode() === 'media') {
+            try {
+                this.mediaDest = Sound.ctx.createMediaStreamDestination();
+                if (!this.mediaEl) {
+                    this.mediaEl = document.createElement('audio');
+                    this.mediaEl.setAttribute('playsinline', '');
+                    this.mediaEl.setAttribute('x-webkit-airplay', 'deny');
+                }
+                this.mediaEl.srcObject = this.mediaDest.stream;
+                Sound.output = this.mediaDest;
+            } catch (error) {
+                Sound.output = null;
+            }
+        } else {
+            Sound.output = null;
+            if (this.mediaEl) {
+                this.mediaEl.pause();
+                this.mediaEl.srcObject = null;
+            }
+        }
+        if (this.engine && this.engine.reconnectAudio) {
+            this.engine.reconnectAudio();
+        }
     },
 
     watchAudio() {
@@ -1179,7 +1297,7 @@ const App = {
     // Older iOS without navigator.audioSession: a looping silent <audio> element
     // switches the page to the media audio category, which ignores silent mode.
     playSilentLoop() {
-        if (!this.isIOS || navigator.audioSession || !this.settings.ignoreSilentSwitch) {
+        if (!this.isIOS || navigator.audioSession || !this.settings.ignoreSilentSwitch || Sound.output) {
             if (this.silentAudio) {
                 this.silentAudio.pause();
             }
@@ -1556,15 +1674,21 @@ const App = {
         this.el.cameraBtn.setAttribute('aria-expanded', String(open));
     },
 
-    renderStates() {
+    async renderStates() {
         const container = document.getElementById('state-list');
-        container.innerHTML = '';
         if (!this.game) {
+            container.innerHTML = '';
             return;
         }
-        for (const slot of this.stateSlots) {
-            const meta = Store.getJSON(`statemeta:${this.game.id}:${slot}`, null);
-            const thumb = Store.getSync(`thumb:${this.game.id}:${slot}`);
+        const id = this.game.id;
+        const thumbs = await Promise.all(this.stateSlots.map((slot) => Store.get(`thumb:${id}:${slot}`).catch(() => null)));
+        container.innerHTML = '';
+        if (!this.game || this.game.id !== id) {
+            return;
+        }
+        for (const [index, slot] of this.stateSlots.entries()) {
+            const meta = Store.getJSON(`statemeta:${id}:${slot}`, null);
+            const thumb = thumbs[index];
             const card = document.createElement('div');
             card.className = 'card state';
             const label = slot === 'auto' ? 'Autoguardado' : `Ranura ${slot}`;
@@ -1633,21 +1757,85 @@ const App = {
 
     async renderStorageInfo() {
         const info = document.getElementById('storage-info');
-        const used = Store.localStorageUsage();
-        let text = `localStorage: ${this.formatSize(used * 2)} usados`;
+        let usage = 0;
+        let quota = 0;
         if (navigator.storage && navigator.storage.estimate) {
             try {
-                const estimate = await navigator.storage.estimate();
-                text += ` · Total del sitio: ${this.formatSize(estimate.usage || 0)}`;
+                ({ usage = 0, quota = 0 } = await navigator.storage.estimate());
             } catch (ignored) { }
         }
+        const sizes = await Store.idbUsage().catch(() => ({}));
+        const rows = [
+            ['ROMs', sizes.rom],
+            ['Estados guardados', sizes.state],
+            ['Miniaturas y portadas', (sizes.thumb || 0) + (sizes.cover || 0)],
+            ['Partidas (.sav)', sizes.sram],
+            ['Biblioteca', sizes.lib],
+            ['Ajustes (localStorage)', Store.localStorageUsage() * 2],
+        ];
+        info.innerHTML = '';
+        if (quota) {
+            const percent = Math.min(100, usage / quota * 100);
+            const bar = document.createElement('div');
+            bar.className = 'storage-bar' + (percent > 80 ? ' full' : '');
+            bar.innerHTML = '<i></i>';
+            bar.firstChild.style.width = Math.max(1, percent) + '%';
+            const label = document.createElement('p');
+            label.className = 'note';
+            label.textContent = `${this.formatSize(usage)} usados de ${this.formatSize(quota)} disponibles (${percent < 1 ? '<1' : Math.round(percent)} %)`;
+            info.append(bar, label);
+        }
+        const table = document.createElement('table');
+        table.className = 'keys';
+        for (const [name, size] of rows) {
+            const row = table.insertRow();
+            row.insertCell().textContent = name;
+            row.insertCell().textContent = size ? '≈ ' + this.formatSize(size) : '—';
+        }
+        info.appendChild(table);
         if (navigator.storage && navigator.storage.persisted) {
             try {
-                text += (await navigator.storage.persisted()) ? ' · Almacenamiento persistente ✅' : '';
+                if (await navigator.storage.persisted()) {
+                    const note = document.createElement('p');
+                    note.className = 'note';
+                    note.textContent = 'Almacenamiento persistente activado ✅';
+                    info.appendChild(note);
+                }
             } catch (ignored) { }
         }
-        info.textContent = text;
     },
+
+    // Warns once per session when the site uses more than 80 % of its quota.
+    async checkStorage() {
+        const now = Date.now();
+        if (this.storageWarned || now - (this.storageChecked || 0) < 60000 || !navigator.storage || !navigator.storage.estimate) {
+            return;
+        }
+        this.storageChecked = now;
+        try {
+            const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+            if (quota && usage / quota > 0.8) {
+                this.storageWarned = true;
+                this.toast('⚠️ El almacenamiento está casi lleno. Libera espacio en Ajustes → Almacenamiento.', 6000);
+            }
+        } catch (ignored) { }
+    },
+
+    // Removes downloaded ROMs of games not played in `days` (entries are kept and
+    // games with a URL download again when played).
+    async cleanDownloads(days = 30) {
+        const limit = Date.now() - days * 86400000;
+        const current = this.game && this.game.entryId;
+        let removed = 0;
+        for (const entry of Library.list()) {
+            if (entry.where && entry.url && entry.id !== current && (entry.played || entry.added || 0) < limit) {
+                await Library.removeDownload(entry.id);
+                removed++;
+            }
+        }
+        return removed;
+    },
+
 
     renderAbout() {
         document.getElementById('install-btn').hidden = !this.installPrompt;
@@ -1895,6 +2083,7 @@ const App = {
 
         // Audio unlock on any gesture (iOS requires touchend / click).
         this.watchAudio();
+        this.setupAudioOutput();
         ['touchend', 'pointerup', 'click', 'keydown'].forEach((type) => {
             document.addEventListener(type, () => this.unlockAudio(), { passive: true });
         });
@@ -1902,6 +2091,9 @@ const App = {
         // Lifecycle: save whenever the app may be closed.
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
+                if (this.mediaEl) {
+                    this.mediaEl.pause();
+                }
                 this.persistNow();
                 Controls.releaseAll();
                 Input.releaseAll();
@@ -2024,6 +2216,10 @@ const App = {
         if (name === 'analytics') {
             Analytics.setEnabled(value);
         }
+        if (name === 'audioOutput') {
+            this.setupAudioOutput();
+            this.unlockAudio();
+        }
     },
 
     async handleAction(action, target) {
@@ -2038,6 +2234,18 @@ const App = {
             case 'theme':
                 this.nextTheme();
                 break;
+            case 'clean-autosaves': {
+                const removed = await this.pruneAutosaves(0, { all: true });
+                this.toast(removed ? `${removed} autoguardados eliminados` : 'No hay autoguardados antiguos');
+                this.renderStorageInfo();
+                break;
+            }
+            case 'clean-downloads': {
+                const removed = await this.cleanDownloads(30);
+                this.toast(removed ? `${removed} descargas eliminadas` : 'No hay descargas sin jugar en 30 días');
+                this.renderStorageInfo();
+                break;
+            }
             case 'welcome-close':
                 this.closeWelcome();
                 break;
@@ -2233,7 +2441,7 @@ const App = {
                 break;
             case 'state-cover': {
                 const id = this.game && this.game.entryId;
-                const thumb = this.game && Store.getSync(`thumb:${this.game.id}:${target.dataset.slot}`);
+                const thumb = this.game && await Store.get(`thumb:${this.game.id}:${target.dataset.slot}`);
                 if (!id || !Library.find(id)) {
                     this.toast('Este juego no está en la biblioteca', 3000);
                 } else if (thumb && await Library.setCover(id, thumb)) {
@@ -2422,11 +2630,15 @@ const App = {
             return;
         }
         // Stored whole: SameBoy reads the RTC appended to .sav files, the legacy core ignores it.
-        Store.setSync('sram:' + this.game.id, Bytes.toBase64(bytes));
+        try {
+            await Store.put('sram:' + this.game.id, Bytes.toBase64(bytes));
+        } catch (error) {
+            this.toast('⚠️ No hay espacio para guardar la partida', 4000);
+            return;
+        }
+        await Store.remove('pending:sram:' + this.game.id);
         await Store.remove('rtc:' + this.game.id);
-        await Store.remove(`state:${this.game.id}:auto`);
-        await Store.remove(`statemeta:${this.game.id}:auto`);
-        await Store.remove(`thumb:${this.game.id}:auto`);
+        await this.removeStates(this.game.id, ['auto']);
         // Stop first so the current (old) save isn't written back on restart.
         this.running = false;
         if (await this.restartGame()) {

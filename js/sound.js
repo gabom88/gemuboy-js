@@ -18,7 +18,7 @@ class Sound {
 
         this.gainNode = Sound.ctx.createGain();
         this.gainNode.gain.value = Sound.volume;
-        this.gainNode.connect(Sound.ctx.destination);
+        this.gainNode.connect(Sound.output || Sound.ctx.destination);
 
         this.buffer = Sound.ctx.createBuffer(2, Sound.bufferSamples, Sound.sampleFrequency);
         this.bufferLeft = this.buffer.getChannelData(0);
@@ -671,3 +671,6 @@ Sound.divisionRatios = [
     2, 4, 8, 12, 16, 20, 24, 28,
 ].map((value => value * Sound.cyclesPerCPUCycle));
 Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
+// Where the engines send their sound: the AudioContext's speakers, or (see
+// App.setupAudioOutput) a stream played by an <audio> element.
+Sound.output = null;
