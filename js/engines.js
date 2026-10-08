@@ -9,6 +9,9 @@
 //   setBattery(bytes, rtc)
 //   captureState() / restoreState(state)
 //   setPalette(settings) / setVolume(volume) / destroy()
+//   width / height             size of the picture (256x224 with a Super Game Boy border)
+//   rewindStep()               go back in time a little (false when there is no more history)
+//   setCheats(codes)           Game Genie / GameShark codes; returns the ones not understood
 
 const Engines = {
     list: [
@@ -16,10 +19,53 @@ const Engines = {
         { id: 'legacy', name: 'gemuboi.js (ligero)' },
     ],
 
+    // Super Game Boy borders for games that support them (SameBoy only).
+    sgb: true,
+    // Seconds of play that can be rewound.
+    rewindSeconds: 20,
+
     create(id) {
         return id === 'legacy' ? new LegacyEngine() : new SameBoyEngine();
     },
 };
+
+// Cheat codes, decoded like SameBoy does (Core/cheats.c).
+//   GameShark  01VVAAAA          value VV at address AAAA (little endian)
+//   Game Genie VVA-AAA(-OOO)     ROM value at address, optionally only when it was OOO
+const Cheats = {
+    normalize(code) {
+        return String(code).toUpperCase().replace(/\s+/g, '');
+    },
+
+    parse(code) {
+        code = this.normalize(code);
+        let m = /^([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$/.exec(code);
+        if (m) {
+            return { address: parseInt(m[4] + m[3], 16), value: parseInt(m[2], 16) };
+        }
+        m = /^([0-9A-F]{3})-?([0-9A-F]{3})(?:-?([0-9A-F]{3}))?$/.exec(code);
+        if (m) {
+            const digits = m[1] + m[2] + (m[3] || '');
+            const value = parseInt(digits.slice(0, 2), 16);
+            let address = parseInt(digits.slice(2, 6), 16);
+            address = ((address >> 4) | (address << 12)) & 0xffff;
+            address ^= 0xf000;
+            if (address > 0x7fff) {
+                return null;
+            }
+            const cheat = { address, value };
+            if (m[3]) {
+                // 7th digit is ignored; the old value is digits 6 and 8.
+                let old = parseInt(digits[6] + digits[8], 16);
+                old = ((old >> 2) | (old << 6)) & 0xff;
+                cheat.old = old ^ 0xba;
+            }
+            return cheat;
+        }
+        return null;
+    },
+};
+
 
 // FNV-1a hash, used to notice when a battery save changes.
 function hashBytes(bytes) {
@@ -39,6 +85,10 @@ class LegacyEngine {
     }
 
     async load(rom) {
+        this.width = 160;
+        this.height = 144;
+        this.history = [];
+        this.frameCount = 0;
         this.gb = new GameBoy();
         this.gb.cartridge.load(rom);
         this.cycles = 0;
@@ -63,6 +113,54 @@ class LegacyEngine {
             this.cycles += gb.cycle();
         }
         this.cycles -= Display.cpuCyclesPerFrame;
+        // Rewind history: a snapshot every 6 frames (10 per second).
+        if (++this.frameCount % 6 === 0) {
+            this.history.push(this.captureState());
+            if (this.history.length > Engines.rewindSeconds * 10) {
+                this.history.shift();
+            }
+        }
+    }
+
+    // Called on every screen refresh while rewinding: one snapshot every 3 calls
+    // (about twice real time).
+    rewindStep() {
+        if (++this.frameCount % 3 !== 0) {
+            return this.history.length > 0;
+        }
+        const state = this.history.pop();
+        if (!state) {
+            return false;
+        }
+        SaveState.restore(this.gb, state);
+        this.cycles = 0;
+        this.gb.display.present();
+        return this.history.length > 0;
+    }
+
+    // Cheats patch what the CPU reads, like SameBoy does.
+    setCheats(codes) {
+        const invalid = [];
+        const patches = new Map();
+        for (const code of codes) {
+            const cheat = Cheats.parse(code);
+            if (cheat) {
+                patches.set(cheat.address, cheat);
+            } else {
+                invalid.push(code);
+            }
+        }
+        const gb = this.gb;
+        delete gb.readAddress; // back to the prototype's method
+        if (patches.size) {
+            const read = gb.readAddress;
+            gb.readAddress = function readWithCheats(address) {
+                const value = read.call(this, address);
+                const cheat = patches.get(address);
+                return cheat && (cheat.old === undefined || cheat.old === value) ? cheat.value : value;
+            };
+        }
+        return invalid;
     }
 
     present(force) {
@@ -71,7 +169,9 @@ class LegacyEngine {
         }
     }
 
-    endFrames() { }
+    endFrames(speed) {
+        Sound.rate = speed < 1 ? speed : 1;
+    }
 
     hasSaveData() {
         return !!this.gb.cartridge.hasSaveData;
@@ -120,6 +220,7 @@ class LegacyEngine {
         }
         SaveState.restore(this.gb, state);
         this.cycles = 0;
+        this.history = [];
     }
 
     setPalette(settings) {
@@ -189,11 +290,16 @@ class SameBoyEngine {
         // Color games run on a Game Boy Color, original games on a Game Boy (DMG),
         // so the custom palettes work like on the classic console.
         this.isCgb = (rom[0x143] & 0x80) !== 0;
+        // Original Game Boy games made for the Super Game Boy get its border and colors.
+        this.isSgb = !this.isCgb && Engines.sgb && rom[0x146] === 0x03 && rom[0x14b] === 0x33;
         // Kept for the whole game: buffers use it even if the AudioContext is
         // later rebuilt with another rate (the browser resamples).
         this.sampleRate = Sound.ctx.sampleRate;
-        M._sb_init(this.isCgb ? 1 : 0, this.sampleRate);
+        M._sb_init(this.isCgb ? 1 : this.isSgb ? 2 : 0, this.sampleRate);
         this.withBuffer(rom, (ptr) => M._sb_load_rom(ptr, rom.length));
+        M._sb_set_rewind(Engines.rewindSeconds);
+        this.width = M._sb_width();
+        this.height = M._sb_height();
         this.gain = Sound.ctx.createGain();
         this.gain.gain.value = this.volume;
         this.gain.connect(Sound.output || Sound.ctx.destination);
@@ -258,6 +364,7 @@ class SameBoyEngine {
         const ctx = Sound.ctx;
         if (this.queued) {
             const now = ctx.currentTime;
+            const rate = speed < 1 ? speed : 1; // slow motion plays the sound slower and deeper
             if (speed > 1 || ctx.state !== 'running') {
                 // Turbo or suspended audio: drop it instead of building up latency.
                 this.nextTime = 0;
@@ -278,9 +385,10 @@ class SameBoyEngine {
                 }
                 const source = ctx.createBufferSource();
                 source.buffer = buffer;
+                source.playbackRate.value = rate;
                 source.connect(this.gain);
                 source.start(this.nextTime);
-                this.nextTime += buffer.duration;
+                this.nextTime += buffer.duration / rate;
             }
             this.queue = [];
             this.queued = 0;
@@ -297,6 +405,25 @@ class SameBoyEngine {
 
     hasSaveData() {
         return this.batterySize > 0;
+    }
+
+    rewindStep() {
+        const more = this.M._sb_rewind_frame() !== 0;
+        this.frameReady = true;
+        return more;
+    }
+
+    setCheats(codes) {
+        const M = this.M;
+        M._sb_cheats_clear();
+        const invalid = [];
+        for (const code of codes) {
+            const text = new TextEncoder().encode(Cheats.normalize(code) + '\0');
+            if (!this.withBuffer(text, (ptr) => M._sb_cheat_add(ptr))) {
+                invalid.push(code);
+            }
+        }
+        return invalid;
     }
 
     getBattery() {

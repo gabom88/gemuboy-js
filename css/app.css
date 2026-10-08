@@ -318,6 +318,8 @@ body {
 .ctrl-a .face,
 .ctrl-b .face,
 .ctrl-turbo .face,
+.ctrl-rewind .face,
+.ctrl-slow .face,
 .ctrl-menu .face {
     position: absolute;
     inset: 0;
@@ -411,6 +413,8 @@ body {
 
 /* ---- Turbo and menu: small rubber buttons ---- */
 .ctrl-turbo .face,
+.ctrl-rewind .face,
+.ctrl-slow .face,
 .ctrl-menu .face {
     background: linear-gradient(180deg, var(--pill-hi) 0%, var(--pill) 55%, var(--pill-lo) 100%);
     box-shadow:
@@ -422,12 +426,19 @@ body {
     font-weight: 800;
 }
 
-.ctrl-turbo span {
+.ctrl-turbo span,
+.ctrl-rewind span {
     letter-spacing: -.12em;
     font-size: .75em;
 }
 
+.ctrl-slow span {
+    font-size: .8em;
+}
+
 .ctrl-turbo.pressed .face,
+.ctrl-rewind.pressed .face,
+.ctrl-slow.pressed .face,
 .ctrl-menu.pressed .face {
     transform: translateY(2px);
     filter: brightness(.88);
@@ -443,6 +454,8 @@ body {
 #controls.editing .ctrl-a,
 #controls.editing .ctrl-b,
 #controls.editing .ctrl-turbo,
+#controls.editing .ctrl-rewind,
+#controls.editing .ctrl-slow,
 #controls.editing .ctrl-menu {
     border-radius: 50%;
 }
@@ -680,7 +693,8 @@ body {
     top: 0;
     z-index: 1;
     display: grid;
-    grid-template-columns: 1fr minmax(0, auto) 1fr;
+    /* The title takes the space left by the buttons (up to five on the right). */
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
     margin: 0 -16px 8px;
@@ -695,6 +709,9 @@ body {
     font-weight: 700;
     text-align: center;
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sheet h2 {
@@ -890,8 +907,25 @@ body {
 
 .header-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-self: end;
+}
+
+@media (max-width: 360px) {
+    .header-actions {
+        gap: 4px;
+    }
+
+    .header-actions .round-btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .sheet header {
+        gap: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
 }
 
 .sheet header > .icon-btn {
@@ -905,12 +939,14 @@ body {
     align-self: center;
 }
 
-#camera-btn svg {
+#camera-btn svg,
+#gif-btn svg {
     width: 18px;
     height: 18px;
 }
 
-#camera-btn[hidden] {
+#camera-btn[hidden],
+#gif-btn[hidden] {
     display: none;
 }
 
@@ -2480,7 +2516,8 @@ a.btn.block[hidden],
 }
 
 /* First-run welcome */
-#welcome {
+#welcome,
+.dialog {
     position: absolute;
     inset: 0;
     z-index: 30;
@@ -2491,7 +2528,8 @@ a.btn.block[hidden],
     animation: fade .2s ease;
 }
 
-#welcome[hidden] {
+#welcome[hidden],
+.dialog[hidden] {
     display: none;
 }
 
@@ -2591,4 +2629,165 @@ a.btn.block[hidden],
 
 #storage-info .keys {
     margin: 4px 0 6px;
+}
+
+/* Header: language toggle */
+.lang-btn span {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+
+/* Tiles: an odd last tile takes the whole row */
+.tiles .tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    min-height: 60px;
+}
+
+/* Share button on game cards, under the favorite star */
+.icon-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.lib-grid .icon-col {
+    flex-direction: row;
+}
+
+.share {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.share svg {
+    width: 20px;
+    height: 20px;
+}
+
+.share:active {
+    color: var(--accent-2);
+}
+
+/* Cheats */
+.card.cheat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cheat-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cheat-info code {
+    color: var(--muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.text.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-transform: uppercase;
+}
+
+/* GIF recording indicator */
+#rec {
+    position: absolute;
+    z-index: 12;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(20, 20, 24, .78);
+    color: #fff;
+    font: 700 14px/1 system-ui, sans-serif;
+    letter-spacing: .04em;
+    cursor: pointer;
+}
+
+#rec[hidden] {
+    display: none;
+}
+
+#rec b {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff3b30;
+    animation: rec-blink 1s steps(2, start) infinite;
+}
+
+#rec span {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+@keyframes rec-blink {
+    to { visibility: hidden; }
+}
+
+.gif-preview {
+    display: block;
+    width: 100%;
+    max-height: 50vh;
+    object-fit: contain;
+    margin: 6px 0 14px;
+    border-radius: 10px;
+    background: #0d0e11;
+    image-rendering: pixelated;
+}
+
+/* Shared game dialog */
+.share-cover {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 10px;
+    border-radius: 14px;
+    background: var(--panel-2) url('../img/icon-192.png') center / cover no-repeat;
+    overflow: hidden;
+}
+
+.share-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Small phones: the card buttons go to their own row under the title */
+@media (max-width: 380px) {
+    .cards:not(.lib-grid) .card.lib .lib-main {
+        flex-wrap: wrap;
+    }
+
+    .cards:not(.lib-grid) .card.lib .rom-info {
+        flex: 1 1 0;
+    }
+
+    .cards:not(.lib-grid) .card.lib .lib-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .cards:not(.lib-grid) .card.lib .icon-col {
+        flex-direction: row;
+    }
 }

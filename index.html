@@ -41,6 +41,8 @@
 
         <div id="controls" aria-hidden="true"></div>
 
+        <button type="button" id="rec" data-action="rec-stop" aria-label="Terminar grabación del GIF" hidden><b></b>REC <span>0:00</span></button>
+
         <div id="toast" role="status" aria-live="polite"></div>
 
         <!-- Layout editor -->
@@ -116,6 +118,10 @@
                     <button type="button" class="icon-btn" data-action="back" id="menu-back" aria-label="Atrás">‹</button>
                     <h1 id="menu-title"><span class="logo">GBoy-JS</span></h1>
                     <div class="header-actions">
+                        <button type="button" class="icon-btn round-btn lang-btn" data-action="lang" id="lang-btn" aria-label="Cambiar idioma a inglés"><span>EN</span></button>
+                        <button type="button" class="icon-btn round-btn" data-action="gif" id="gif-btn" aria-label="Grabar GIF" hidden>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/><circle cx="7" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg>
+                        </button>
                         <button type="button" class="icon-btn round-btn" data-action="capture-menu" id="camera-btn" aria-label="Captura de pantalla" aria-haspopup="true" aria-expanded="false" hidden>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
                         </button>
@@ -138,6 +144,7 @@
                         <button type="button" class="tile" data-action="reset" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Reiniciar</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><rect x="9" y="7" width="6" height="5"/><path d="M9 16h2M13 16h2"/></svg><span>Juegos</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="saveload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="5"/></svg><span>Guardar / Cargar</span></button>
+                        <button type="button" class="tile" data-action="page" data-page-target="cheats" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 15.4 6.7 18.4l1.2-6L3.4 8.3l6-.7z"/></svg><span>Trucos</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="interface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg><span>Interfaz</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12a4 4 0 0 1 4 4v1a4 4 0 0 1-7 2.6L14 15h-4l-1 .6A4 4 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg><span>Controles</span></button>
                         <button type="button" class="tile" data-action="page" data-page-target="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Ajustes</span></button>
@@ -290,6 +297,21 @@
                     <div id="state-list" class="cards"></div>
                 </section>
 
+                <section class="page" data-page="cheats" data-title="Trucos">
+                    <p class="note">Códigos para <strong id="cheat-game" data-no-i18n></strong>. Se guardan para este juego y se aplican
+                        cada vez que lo abres.</p>
+                    <label class="row"><span>Código</span>
+                        <input type="text" class="text mono" id="cheat-code" placeholder="00A-17B-C49  ·  01FF16D0" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+                    <label class="row"><span>Nombre (opcional)</span>
+                        <input type="text" class="text" id="cheat-name" maxlength="60" placeholder="Vidas infinitas" autocomplete="off"></label>
+                    <button type="button" class="btn primary block" data-action="cheat-add">Añadir truco</button>
+                    <div id="cheat-list" class="cards"></div>
+                    <p class="note">Formatos: <strong>Game Genie</strong> (<code>ABC-DEF</code> o <code>ABC-DEF-GHI</code>) y
+                        <strong>GameShark</strong> (<code>01VVAAAA</code>). Puedes pegar varios códigos de un mismo truco
+                        separados por espacios. Algunos trucos pueden colgar el juego: desactívalos y carga un estado si
+                        ocurre.</p>
+                </section>
+
                 <section class="page" data-page="palette" data-title="Paleta de colores">
                     <p class="note" id="palette-note">Se aplica a juegos de Game Boy original. Los juegos de Game Boy
                         Color usan sus propios colores.</p>
@@ -363,6 +385,14 @@
                             <option value="6">6×</option>
                             <option value="8">8×</option>
                         </select></label>
+                    <label class="row"><span>Velocidad de la cámara lenta</span>
+                        <select data-setting="slowSpeed">
+                            <option value="0.75">0,75×</option>
+                            <option value="0.5">0,5×</option>
+                            <option value="0.25">0,25×</option>
+                        </select></label>
+                    <p class="note">Botones ◀◀ (rebobinar, mantener pulsado) y ½× (cámara lenta) en la pantalla, teclas R y Q.
+                        Puedes moverlos u ocultarlos en «Editar posición, tamaño y transparencia».</p>
                     <button type="button" class="btn block" data-action="edit-layout">Editar posición, tamaño y transparencia…</button>
 
                     <h2>Pantalla</h2>
@@ -385,6 +415,10 @@
                         <input type="checkbox" class="toggle" data-setting="smoothing"></label>
                     <label class="row check"><span>Mostrar FPS</span>
                         <input type="checkbox" class="toggle" data-setting="showFps"></label>
+                    <label class="row check"><span>Marcos y colores de Super Game Boy</span>
+                        <input type="checkbox" class="toggle" data-setting="sgbBorders"></label>
+                    <p class="note">Los juegos de Game Boy preparados para Super Game Boy se muestran con su marco y sus
+                        colores (solo con el motor SameBoy).</p>
 
                     <h2>Motor de emulación</h2>
                     <label class="row"><span>Motor de Game Boy</span>
@@ -456,6 +490,8 @@
                         <tr><td>Start</td><td>Enter</td></tr>
                         <tr><td>Select</td><td>Shift / Retroceso</td></tr>
                         <tr><td>Turbo</td><td>Espacio (mantener)</td></tr>
+                        <tr><td>Rebobinar</td><td>R (mantener)</td></tr>
+                        <tr><td>Cámara lenta</td><td>Q</td></tr>
                         <tr><td>Menú</td><td>Esc</td></tr>
                         <tr><td>Guardar / cargar estado</td><td>F2 / F4</td></tr>
                     </table>
@@ -483,6 +519,33 @@
             </div>
         </div>
 
+        <!-- Shared game link -->
+        <div id="share-dialog" class="dialog" hidden>
+            <div class="welcome-box" role="dialog" aria-modal="true" aria-labelledby="share-title">
+                <div class="share-cover"></div>
+                <small class="now-label">Te han compartido un juego</small>
+                <h2 id="share-title" data-no-i18n></h2>
+                <p id="share-meta" data-no-i18n></p>
+                <div class="editor-actions">
+                    <button type="button" class="btn ghost" data-action="share-cancel">Ahora no</button>
+                    <button type="button" class="btn primary" data-action="share-play">Jugar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recorded GIF -->
+        <div id="gif-dialog" class="dialog" hidden>
+            <div class="welcome-box" role="dialog" aria-modal="true" aria-labelledby="gif-title">
+                <h2 id="gif-title">GIF de la partida</h2>
+                <img class="gif-preview" alt="Vista previa del GIF">
+                <div class="editor-actions">
+                    <button type="button" class="btn ghost" data-action="gif-close">Cerrar</button>
+                    <button type="button" class="btn" data-action="gif-save">Guardar</button>
+                    <button type="button" class="btn primary" data-action="gif-share">Compartir</button>
+                </div>
+            </div>
+        </div>
+
         <input type="file" id="rom-input" hidden>
         <input type="file" id="sav-input" hidden>
         <input type="file" id="settings-input" hidden>
@@ -505,6 +568,9 @@
     <script src="js/gamepad.js" defer></script>
     <script src="js/engines.js" defer></script>
     <script src="js/analytics.js" defer></script>
+    <script src="js/gif.js" defer></script>
+    <script src="js/i18n-en.js" defer></script>
+    <script src="js/i18n.js" defer></script>
     <script src="js/library.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
