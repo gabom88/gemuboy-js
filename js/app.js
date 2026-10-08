@@ -27,6 +27,7 @@ const App = {
         menuTheme: 'night',
         libraryView: 'list',
         librarySort: 'added',
+        analytics: true,
     },
 
     stateSlots: ['auto', '1', '2', '3', '4'],
@@ -43,6 +44,7 @@ const App = {
     init() {
         this.settings = Object.assign({}, this.defaults, Store.getJSON('settings', {}));
         this.settings.opacity = Number(this.settings.opacity);
+        Analytics.init(this.settings);
         this.isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
         this.isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         this.isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -150,6 +152,7 @@ const App = {
         this.saveSettings();
         this.applyTheme();
         this.toast(`Tema: ${theme.name} (${theme.dark ? 'oscuro' : 'claro'})`);
+        Analytics.event('theme_change', { theme: theme.id });
     },
 
     applySettings() {
@@ -777,6 +780,7 @@ const App = {
             Store.setJSON(`statemeta:${this.game.id}:${slot}`, { time: Date.now() });
             if (!quiet) {
                 this.toast(slot === 'auto' ? 'Estado guardado' : `Estado guardado en ranura ${slot}`);
+                Analytics.event('state_save', { slot, game_title: this.game.title });
             }
             return true;
         } catch (error) {
@@ -805,6 +809,7 @@ const App = {
             this.redraw();
             if (!quiet) {
                 this.toast(slot === 'auto' ? 'Estado cargado' : `Estado ${slot} cargado`);
+                Analytics.event('state_load', { slot, game_title: this.game.title });
             }
             return true;
         } catch (error) {
@@ -871,7 +876,7 @@ const App = {
     },
 
     // entryId: library entry the ROM comes from (saves and states use the ROM's own id).
-    async loadRom(bytes, { name = '', title = '', store = true, state = null, entryId = null } = {}) {
+    async loadRom(bytes, { name = '', title = '', store = true, state = null, entryId = null, source = '' } = {}) {
         if (bytes.length < 0x150) {
             this.toast('El archivo no es un ROM válido', 4000);
             return false;
@@ -899,6 +904,12 @@ const App = {
         this.updateVolume();
         this.running = true;
         Store.setSync('last', info.entryId);
+        Analytics.event('game_start', {
+            game_title: info.title,
+            engine: engine.id,
+            system: info.cgb ? 'GBC' : 'GB',
+            source: source || (store ? 'file' : state ? 'resume' : 'library'),
+        });
 
         if (state) {
             await this.loadState(state, { quiet: true });
@@ -959,6 +970,7 @@ const App = {
                     const updated = this.library();
                     updated.unshift(Object.assign({ id, title: info.title, name: info.name, added: Date.now() }, values));
                     this.setLibrary(updated);
+                    Analytics.event('rom_add', { game_title: info.title, system: info.cgb ? 'GBC' : 'GB' });
                 }
                 this.toast(where === 'localStorage' ? 'ROM guardado en el dispositivo' : 'ROM guardado (IndexedDB)');
             } catch (error) {
@@ -1040,6 +1052,7 @@ const App = {
             this.toast('Motor: ' + label);
             return;
         }
+        Analytics.event('engine_change', { engine: this.settings.engine });
         if (await this.restartGame()) {
             this.toast('Motor cambiado: ' + label, 3000);
         }
@@ -1051,7 +1064,19 @@ const App = {
         const { name, title, entryId } = this.game;
         this.persistNow();
         this.running = false;
-        return this.loadRom(bytes, { name, title, entryId, store: false });
+        return this.loadRom(bytes, { name, title, entryId, store: false, source: 'restart' });
+    },
+
+    // Shown once, the first time the app opens.
+    showWelcome() {
+        if (!Store.getJSON('welcomed', false)) {
+            document.getElementById('welcome').hidden = false;
+        }
+    },
+
+    closeWelcome() {
+        document.getElementById('welcome').hidden = true;
+        Store.setJSON('welcomed', true);
     },
 
     async boot() {
@@ -1066,6 +1091,7 @@ const App = {
             }
         }
         this.openMenu();
+        this.showWelcome();
     },
 
     // ------------------------------------------------------------------- audio
@@ -1186,11 +1212,53 @@ const App = {
         const hasGame = !!this.engine;
         const now = document.getElementById('now-playing');
         if (hasGame) {
-            now.innerHTML = `<div class="now"><small>Jugando</small><strong></strong><span class="badge">${this.game.cgb ? 'GBC' : 'GB'}</span></div>`;
-            now.querySelector('strong').textContent = this.game.title;
+            now.innerHTML = '';
+            now.appendChild(this.nowPlayingCard());
         } else {
             now.innerHTML = '<p class="welcome">Emulador de Game Boy y Game Boy Color.<br>Abre <strong>Juegos</strong> para jugar la demo, añadir tus ROMs<br>o importar listas de juegos.</p>';
         }
+    },
+
+    // Card of the running game at the top of the menu, with its favorite star.
+    nowPlayingCard() {
+        const entry = this.game.entryId ? Library.find(this.game.entryId) : null;
+        const card = document.createElement('div');
+        card.className = 'card lib now-card';
+        card.innerHTML = `
+            <div class="lib-main">
+                <div class="cover"><span class="cover-ph"></span></div>
+                <div class="rom-info">
+                    <small class="now-label">Jugando</small>
+                    <strong></strong>
+                    <small class="meta"></small>
+                </div>
+                <div class="lib-actions">
+                    ${entry ? `<button type="button" class="fav${entry.fav ? ' on' : ''}" data-action="lib-fav" aria-label="Favorito">${entry.fav ? '★' : '☆'}</button>
+                    <button type="button" class="btn ghost small more" data-action="lib-edit" aria-label="Ficha del juego">⋯</button>` : ''}
+                </div>
+            </div>
+            <p class="desc"></p>`;
+        card.querySelectorAll('[data-action]').forEach((button) => { button.dataset.id = entry.id; });
+        const title = (entry && entry.title) || this.game.title;
+        card.querySelector('strong').textContent = title;
+        card.querySelector('.cover-ph').textContent = (title || '?').trim().charAt(0).toUpperCase();
+        const values = entry ? [entry.year, entry.genre, entry.collection] : [];
+        card.querySelector('.meta').textContent = [...new Set([...values, this.game.cgb ? 'GBC' : 'GB'].filter(Boolean))].join(' · ');
+        const desc = card.querySelector('.desc');
+        desc.textContent = (entry && entry.description) || '';
+        desc.hidden = !desc.textContent;
+        if (entry) {
+            Library.coverOf(entry).then((src) => {
+                if (src) {
+                    const img = document.createElement('img');
+                    img.alt = '';
+                    img.onerror = () => img.remove();
+                    img.src = src;
+                    card.querySelector('.cover').appendChild(img);
+                }
+            });
+        }
+        return card;
     },
 
     formatSize(bytes) {
@@ -1251,6 +1319,7 @@ const App = {
             return;
         }
         document.getElementById('import-text').value = list.text;
+        this.importSource = list.file;
         document.getElementById('import-collection').value = '';
         this.updateImportGutter();
         this.previewImport();
@@ -1335,6 +1404,8 @@ const App = {
         this.importParsed = null;
         document.getElementById('import-text').value = '';
         this.toast(`Lista importada: ${result.added} nuevos, ${result.updated} actualizados`, 3000);
+        Analytics.event('list_import', { list: this.importSource || 'manual', added: result.added, updated: result.updated });
+        this.importSource = null;
         Library.view.filter = 'all';
         Library.view.query = '';
         this.showPage('library');
@@ -1349,6 +1420,7 @@ const App = {
         }
         if (await Library.setCover(id, this.el.canvas.toDataURL('image/png'))) {
             this.toast('Portada actualizada');
+            Analytics.event('screenshot', { type: 'cover', game_title: this.game.title });
         }
     },
 
@@ -1369,6 +1441,7 @@ const App = {
             if (blob) {
                 this.download(blob, `GBoy-JS_${title}_${stamp}.png`);
                 this.toast('Captura guardada');
+                Analytics.event('screenshot', { type: 'png', game_title: this.game.title });
             }
         }, 'image/png');
     },
@@ -1632,6 +1705,7 @@ const App = {
             this.el.txtInput.value = '';
             if (file) {
                 importText.value = await file.text();
+                this.importSource = 'file:' + file.name;
                 this.renderImport();
                 this.previewImport();
             }
@@ -1763,6 +1837,7 @@ const App = {
             }
         });
         addEventListener('appinstalled', () => {
+            Analytics.event('app_install');
             this.installPrompt = null;
             this.toast('¡App instalada!');
         });
@@ -1830,6 +1905,9 @@ const App = {
         if (name === 'engine') {
             this.switchEngine();
         }
+        if (name === 'analytics') {
+            Analytics.setEnabled(value);
+        }
     },
 
     async handleAction(action, target) {
@@ -1843,6 +1921,13 @@ const App = {
                 break;
             case 'theme':
                 this.nextTheme();
+                break;
+            case 'welcome-close':
+                this.closeWelcome();
+                break;
+            case 'welcome-games':
+                this.closeWelcome();
+                this.openMenu('library');
                 break;
             case 'edit-screen':
                 this.startScreenEditor();
@@ -1918,6 +2003,9 @@ const App = {
                 if (entry) {
                     Library.update(entry.id, { fav: !entry.fav });
                     Library.refreshEntry(entry.id);
+                    if (this.page === 'main') {
+                        this.renderMain();
+                    }
                 }
                 break;
             }
@@ -1966,6 +2054,7 @@ const App = {
                 break;
             case 'import-clear':
                 document.getElementById('import-text').value = '';
+                this.importSource = null;
                 this.renderImport();
                 break;
             case 'import-preview':
@@ -2197,6 +2286,7 @@ const App = {
         this.settings.opacity = Number(this.settings.opacity);
         this.saveSettings();
         Input.configure(this.settings);
+        Analytics.setEnabled(this.settings.analytics);
         this.applyPalette();
         this.applySettings();
         this.redraw();
