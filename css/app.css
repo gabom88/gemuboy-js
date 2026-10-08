@@ -2568,3 +2568,27 @@ a.btn.block[hidden],
     font-size: 13px;
     color: var(--muted);
 }
+
+/* Storage usage */
+.storage-bar {
+    height: 10px;
+    margin: 6px 2px 2px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+}
+
+.storage-bar i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+}
+
+.storage-bar.full i {
+    background: var(--danger);
+}
+
+#storage-info .keys {
+    margin: 4px 0 6px;
+}

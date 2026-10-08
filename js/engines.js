@@ -139,7 +139,7 @@ class LegacyEngine {
         } catch (ignored) { }
         sound.gainNode = Sound.ctx.createGain();
         sound.gainNode.gain.value = Sound.volume;
-        sound.gainNode.connect(Sound.ctx.destination);
+        sound.gainNode.connect(Sound.output || Sound.ctx.destination);
         sound.nextPush = 0;
     }
 
@@ -196,7 +196,7 @@ class SameBoyEngine {
         this.withBuffer(rom, (ptr) => M._sb_load_rom(ptr, rom.length));
         this.gain = Sound.ctx.createGain();
         this.gain.gain.value = this.volume;
-        this.gain.connect(Sound.ctx.destination);
+        this.gain.connect(Sound.output || Sound.ctx.destination);
         this.imageCtx = Display.ctx;
         this.batterySize = M._sb_battery_size();
         this.lastHash = null;
@@ -401,7 +401,7 @@ class SameBoyEngine {
         } catch (ignored) { }
         this.gain = Sound.ctx.createGain();
         this.gain.gain.value = this.volume;
-        this.gain.connect(Sound.ctx.destination);
+        this.gain.connect(Sound.output || Sound.ctx.destination);
         this.nextTime = 0;
         this.queue = [];
         this.queued = 0;

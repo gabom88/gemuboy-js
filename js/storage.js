@@ -1,7 +1,9 @@
 // Persistent storage helpers.
-// Everything is stored in localStorage. Values that do not fit in the
-// localStorage quota (large ROMs, save states) transparently fall back to
-// IndexedDB so the app keeps working on browsers with small quotas (Safari).
+// Small things (settings, flags, state metadata) live in localStorage, which is
+// synchronous and only holds ~5 MB. Everything big (ROMs, save states,
+// thumbnails, covers, cartridge saves, the library) goes to IndexedDB, which
+// can use a large part of the device's free space. Async values fall back to
+// localStorage only if IndexedDB is unavailable.
 const Store = {
     prefix: 'gemuboy:',
 
@@ -28,6 +30,20 @@ const Store = {
         }
     },
 
+    // Names (without prefix) of the localStorage keys starting with `start`.
+    localKeys(start) {
+        const names = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(this.prefix + start)) {
+                    names.push(k.slice(this.prefix.length));
+                }
+            }
+        } catch (ignored) { }
+        return names;
+    },
+
     getSync(name) {
         try {
             return localStorage.getItem(this.key(name));
@@ -45,19 +61,75 @@ const Store = {
         }
     },
 
-    // Async string storage: localStorage first, IndexedDB as fallback.
+    // Async string storage: IndexedDB first, localStorage as fallback.
     async put(name, value) {
         try {
-            localStorage.setItem(this.key(name), value);
-            await this.idbDelete(name).catch(() => {});
-            return 'localStorage';
-        } catch (error) {
+            await this.idbPut(name, value);
             try {
                 localStorage.removeItem(this.key(name));
             } catch (ignored) { }
-            await this.idbPut(name, value);
             return 'indexedDB';
+        } catch (error) {
+            localStorage.setItem(this.key(name), value);
+            return 'localStorage';
         }
+    },
+
+    // Big values written by earlier versions to localStorage move to IndexedDB.
+    heavyPrefixes: ['rom:', 'state:', 'thumb:', 'cover:', 'sram:'],
+
+    async migrate() {
+        const keys = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(this.prefix) && this.heavyPrefixes.some((p) => k.startsWith(this.prefix + p))) {
+                    keys.push(k.slice(this.prefix.length));
+                }
+            }
+        } catch (ignored) {
+            return 0;
+        }
+        let moved = 0;
+        for (const name of keys) {
+            const value = this.getSync(name);
+            if (value === null) {
+                continue;
+            }
+            try {
+                await this.idbPut(name, value);
+                localStorage.removeItem(this.key(name));
+                moved++;
+            } catch (error) {
+                break; // IndexedDB unavailable: keep using localStorage
+            }
+        }
+        return moved;
+    },
+
+    // Total characters stored per key prefix in IndexedDB (for the storage panel).
+    async idbUsage() {
+        const db = await this.idb();
+        return new Promise((resolve, reject) => {
+            const sizes = {};
+            const request = db.transaction('kv', 'readonly').objectStore('kv').openCursor();
+            request.onsuccess = () => {
+                const cursor = request.result;
+                if (!cursor) {
+                    resolve(sizes);
+                    return;
+                }
+                const prefix = String(cursor.key).split(':')[0];
+                const value = cursor.value;
+                sizes[prefix] = (sizes[prefix] || 0) + (typeof value === 'string' ? value.length : 0);
+                cursor.continue();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    },
+
+    async idbKeys() {
+        return this.idbRequest('readonly', (store) => store.getAllKeys());
     },
 
     async get(name) {
@@ -193,6 +265,18 @@ const Bytes = {
             } catch (ignored) { }
         }
         return 'b64:' + this.toBase64(bytes);
+    },
+
+    // Text versions (save states are JSON).
+    packText(text) {
+        return this.pack(new TextEncoder().encode(text));
+    },
+
+    async unpackText(text) {
+        if (text.startsWith('gz:') || text.startsWith('b64:')) {
+            return new TextDecoder().decode(await this.unpack(text));
+        }
+        return text; // stored uncompressed (older versions, emergency copies)
     },
 
     async unpack(text) {

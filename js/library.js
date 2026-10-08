@@ -40,15 +40,44 @@ const Library = {
     },
 
     // ------------------------------------------------------------- storage
+    // The library lives in IndexedDB ("lib"); a copy in memory keeps reads
+    // synchronous. Libraries from earlier versions (localStorage "roms") move
+    // over on the first start.
+    async load() {
+        let text = null;
+        try {
+            text = await Store.idbGet('lib');
+        } catch (ignored) { }
+        const legacy = Store.getSync('roms');
+        if (typeof text !== 'string') {
+            text = legacy;
+        }
+        this.cache = typeof text === 'string' ? text : '[]';
+        if (legacy !== null) {
+            try {
+                await Store.idbPut('lib', this.cache);
+                await Store.remove('roms');
+            } catch (ignored) { }
+        }
+    },
+
     list() {
-        return Store.getJSON('roms', []);
+        if (this.cache === undefined) {
+            return Store.getJSON('roms', []);
+        }
+        return JSON.parse(this.cache);
     },
 
     save(list) {
-        if (!Store.setJSON('roms', list)) {
-            this.app.toast('⚠️ No hay espacio para guardar la biblioteca', 4000);
-            return false;
-        }
+        this.cache = JSON.stringify(list);
+        const text = this.cache;
+        // Writes run in order; each one stores the latest library.
+        this.writing = (this.writing || Promise.resolve()).then(() => (text === this.cache ? Store.idbPut('lib', text) : null))
+            .catch(() => {
+                if (!Store.setSync('roms', this.cache)) {
+                    this.app.toast('⚠️ No hay espacio para guardar la biblioteca', 4000);
+                }
+            });
         return true;
     },
 

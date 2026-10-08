@@ -328,6 +328,14 @@
                         <input type="range" data-setting="volume" min="0" max="100" step="5"></label>
                     <label class="row check"><span>Silenciar</span>
                         <input type="checkbox" class="toggle" data-setting="muted"></label>
+                    <label class="row"><span>Salida de audio</span>
+                        <select data-setting="audioOutput">
+                            <option value="auto">Automática (recomendada)</option>
+                            <option value="direct">Directa (Web Audio, menor retardo)</option>
+                            <option value="media">Reproductor multimedia (compatibilidad iPhone)</option>
+                        </select></label>
+                    <p class="note">Si un juego no suena en tu iPhone, usa «Reproductor multimedia». «Automática» ya lo usa
+                        en iPhone y iPad.</p>
                     <label class="row check" id="row-silent-switch"><span>Sonar con el iPhone en silencio</span>
                         <input type="checkbox" class="toggle" data-setting="ignoreSilentSwitch"></label>
 
@@ -392,9 +400,15 @@
                     <h2>Guardado</h2>
                     <label class="row check"><span>Autoguardar estado (continuar donde lo dejaste)</span>
                         <input type="checkbox" class="toggle" data-setting="autoState"></label>
-                    <p class="note">La memoria de la partida (pila del cartucho) se guarda automáticamente en tiempo real
-                        en localStorage.</p>
-                    <div id="storage-info" class="note"></div>
+                    <p class="note">La partida del cartucho se guarda automáticamente en tiempo real en el dispositivo.</p>
+
+                    <h2>Almacenamiento</h2>
+                    <div id="storage-info" class="storage"></div>
+                    <button type="button" class="btn block" data-action="clean-autosaves">Borrar autoguardados antiguos</button>
+                    <button type="button" class="btn block" data-action="clean-downloads">Borrar descargas de juegos no jugados en 30 días</button>
+                    <p class="note">Las fichas de la biblioteca se conservan: los juegos con URL se vuelven a descargar al pulsar
+                        «Jugar». Nunca se borran las partidas (.sav) ni los estados de las ranuras 1–4. Se guarda
+                        automáticamente el autoguardado de los 10 últimos juegos.</p>
 
                     <h2>Privacidad</h2>
                     <label class="row check"><span>Enviar estadísticas de uso anónimas</span>
