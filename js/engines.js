@@ -131,6 +131,18 @@ class LegacyEngine {
         this.gb.sound.gainNode.gain.value = volume;
     }
 
+    // Moves the output to a new AudioContext (see App.recreateAudio).
+    reconnectAudio() {
+        const sound = this.gb.sound;
+        try {
+            sound.gainNode.disconnect();
+        } catch (ignored) { }
+        sound.gainNode = Sound.ctx.createGain();
+        sound.gainNode.gain.value = Sound.volume;
+        sound.gainNode.connect(Sound.ctx.destination);
+        sound.nextPush = 0;
+    }
+
     destroy() {
         try {
             this.gb.sound.gainNode.disconnect();
@@ -177,7 +189,10 @@ class SameBoyEngine {
         // Color games run on a Game Boy Color, original games on a Game Boy (DMG),
         // so the custom palettes work like on the classic console.
         this.isCgb = (rom[0x143] & 0x80) !== 0;
-        M._sb_init(this.isCgb ? 1 : 0, Sound.ctx.sampleRate);
+        // Kept for the whole game: buffers use it even if the AudioContext is
+        // later rebuilt with another rate (the browser resamples).
+        this.sampleRate = Sound.ctx.sampleRate;
+        M._sb_init(this.isCgb ? 1 : 0, this.sampleRate);
         this.withBuffer(rom, (ptr) => M._sb_load_rom(ptr, rom.length));
         this.gain = Sound.ctx.createGain();
         this.gain.gain.value = this.volume;
@@ -250,7 +265,7 @@ class SameBoyEngine {
                 if (this.nextTime < now + 0.02 || this.nextTime > now + 0.3) {
                     this.nextTime = now + 0.06;
                 }
-                const buffer = ctx.createBuffer(2, this.queued, ctx.sampleRate);
+                const buffer = ctx.createBuffer(2, this.queued, this.sampleRate);
                 const left = buffer.getChannelData(0);
                 const right = buffer.getChannelData(1);
                 let offset = 0;
@@ -378,6 +393,18 @@ class SameBoyEngine {
         if (this.gain) {
             this.gain.gain.value = volume;
         }
+    }
+
+    reconnectAudio() {
+        try {
+            this.gain.disconnect();
+        } catch (ignored) { }
+        this.gain = Sound.ctx.createGain();
+        this.gain.gain.value = this.volume;
+        this.gain.connect(Sound.ctx.destination);
+        this.nextTime = 0;
+        this.queue = [];
+        this.queued = 0;
     }
 
     destroy() {
