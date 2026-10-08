@@ -28,8 +28,8 @@ for name in ["dmg_boot", "mgb_boot", "sgb_boot", "sgb2_boot", "cgb0_boot", "cgb_
 out.write_text("\n".join(lines) + "\n")
 PY
 
-CORE=$(ls "$WORK"/SameBoy/Core/*.c | grep -v -E '/(debugger|sm83_disassembler|symbol_hash|cheats|cheat_search|rewind)\.c$')
-DEFS="-DGB_INTERNAL -DGB_DISABLE_DEBUGGER -DGB_DISABLE_CHEATS -DGB_DISABLE_CHEAT_SEARCH -DGB_DISABLE_REWIND -D_GNU_SOURCE -DGB_VERSION=\"$VERSION\" -DGB_COPYRIGHT_YEAR=\"2026\""
+CORE=$(ls "$WORK"/SameBoy/Core/*.c | grep -v -E '/(debugger|sm83_disassembler|symbol_hash|cheat_search)\.c$')
+DEFS="-DGB_INTERNAL -DGB_DISABLE_DEBUGGER -DGB_DISABLE_CHEAT_SEARCH -D_GNU_SOURCE -DGB_VERSION=\"$VERSION\" -DGB_COPYRIGHT_YEAR=\"2026\""
 
 mkdir -p "$ROOT/js/sameboy"
 # shellcheck disable=SC2086

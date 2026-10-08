@@ -157,6 +157,60 @@ const Library = {
         return name.replace(/\.(gbc?|zip)$/i, '').replace(/[_+]+/g, ' ').replace(/\s+/g, ' ').trim() || url;
     },
 
+    // ------------------------------------------------------------- share link
+    // Only games with a ROM link can be shared (a file added from the device can't).
+    canShare(entry) {
+        return !!entry && this.isLink(entry.url);
+    },
+
+    shareButton: '<button type="button" class="share" data-action="lib-share" aria-label="Compartir enlace del juego">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>',
+
+    shareLink(entry) {
+        const params = new URLSearchParams();
+        params.set('play', this.urlKey(entry.url));
+        if (entry.title) {
+            params.set('t', entry.title);
+        }
+        if (this.isWebUrl(entry.image) || this.isLocalPath(entry.image)) {
+            params.set('img', this.urlKey(entry.image));
+        }
+        if (entry.year) {
+            params.set('y', entry.year);
+        }
+        if (entry.genre) {
+            params.set('g', entry.genre);
+        }
+        return location.origin + location.pathname + '?' + params.toString();
+    },
+
+    async share(id) {
+        const entry = this.find(id);
+        if (!this.canShare(entry)) {
+            this.app.toast('Este juego se añadió desde un archivo: no tiene un enlace para compartir', 4000);
+            return;
+        }
+        const url = this.shareLink(entry);
+        Analytics.event('share', { game_title: entry.title });
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: entry.title + ' · GBoy-JS', text: '🎮 ' + entry.title + ' — juega en GBoy-JS', url });
+                return;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    return;
+                }
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(url);
+            this.app.toast('🔗 Enlace copiado al portapapeles');
+        } catch (error) {
+            prompt('Copia el enlace del juego:', url);
+        }
+    },
+
     // ----------------------------------------------------------- text lists
     // One game per line: "name | url | description | year | genre | cover".
     // Also accepts " --- " as separator and tabs (cells pasted from a spreadsheet).
@@ -850,18 +904,18 @@ const Library = {
             <div class="lib-main">
                 <button type="button" class="cover" data-action="lib-play" aria-label="Jugar"><span class="cover-ph"></span></button>
                 <div class="rom-info">
-                    <strong></strong>
-                    <small class="meta"></small>
+                    <strong data-no-i18n></strong>
+                    <small class="meta" data-no-i18n></small>
                     <span class="status"></span>
                     <span class="bar"><i></i></span>
                 </div>
                 <div class="lib-actions">
-                    <button type="button" class="fav" data-action="lib-fav" aria-label="Favorito"></button>
+                    <span class="icon-col"><button type="button" class="fav" data-action="lib-fav" aria-label="Favorito"></button>${this.canShare(entry) ? this.shareButton : ''}</span>
                     ${grid ? '' : '<button type="button" class="btn primary small" data-action="lib-play">Jugar</button>'}
                     <button type="button" class="btn ghost small more" data-action="lib-edit" aria-label="Ficha del juego">⋯</button>
                 </div>
             </div>
-            <p class="desc"></p>
+            <p class="desc" data-no-i18n></p>
             <small class="details"></small>`;
         card.querySelectorAll('[data-action]').forEach((button) => { button.dataset.id = entry.id; });
         card.querySelector('strong').textContent = entry.title || 'Sin título';

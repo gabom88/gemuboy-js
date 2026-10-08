@@ -53,13 +53,14 @@ static void boot_rom_load(GB_gameboy_t *g, GB_boot_rom_t type) {
     }
 }
 
-// Creates a fresh emulated console. cgb: 1 = Game Boy Color, 0 = original Game Boy.
-EMSCRIPTEN_KEEPALIVE int sb_init(int cgb, int sample_rate) {
+// Creates a fresh emulated console. model: 0 = original Game Boy, 1 = Game Boy
+// Color, 2 = Super Game Boy 2 (with its border and colors).
+EMSCRIPTEN_KEEPALIVE int sb_init(int model, int sample_rate) {
     if (gb) {
         GB_free(gb);
         GB_dealloc(gb);
     }
-    gb = GB_init(GB_alloc(), cgb ? GB_MODEL_CGB_E : GB_MODEL_DMG_B);
+    gb = GB_init(GB_alloc(), model == 1 ? GB_MODEL_CGB_E : model == 2 ? GB_MODEL_SGB2 : GB_MODEL_DMG_B);
     GB_set_boot_rom_load_callback(gb, boot_rom_load);
     GB_set_rgb_encode_callback(gb, rgb_encode);
     GB_set_vblank_callback(gb, vblank);
@@ -71,7 +72,8 @@ EMSCRIPTEN_KEEPALIVE int sb_init(int cgb, int sample_rate) {
     GB_set_rumble_mode(gb, GB_RUMBLE_CARTRIDGE_ONLY);
     GB_set_rumble_callback(gb, rumble_cb);
     GB_set_color_correction_mode(gb, GB_COLOR_CORRECTION_MODERN_BALANCED);
-    GB_set_border_mode(gb, GB_BORDER_NEVER);
+    GB_set_border_mode(gb, model == 2 ? GB_BORDER_SGB : GB_BORDER_NEVER);
+    GB_set_cheats_enabled(gb, true);
     audio_len = 0;
     rumble = 0;
     return 1;
@@ -130,3 +132,19 @@ EMSCRIPTEN_KEEPALIVE void sb_set_palette(const uint8_t *rgb) {
     palette.colors[4] = palette.colors[3]; /* screen colour while the LCD is off */
     GB_set_palette(gb, &palette);
 }
+
+// Rewind: SameBoy keeps compressed snapshots of the last seconds of play.
+EMSCRIPTEN_KEEPALIVE void sb_set_rewind(double seconds) { GB_set_rewind_length(gb, seconds); }
+
+// Steps one frame back in time and draws it. Returns 0 when there is no more history.
+EMSCRIPTEN_KEEPALIVE int sb_rewind_frame(void) {
+    GB_rewind_pop(gb);
+    int more = GB_rewind_pop(gb);
+    sb_run_frame(); /* draws the frame (and records it again) */
+    audio_len = 0;
+    return more;
+}
+
+// Cheats: Game Genie (ABC-DEF-GHI) and GameShark (01VVAAAA) codes.
+EMSCRIPTEN_KEEPALIVE int sb_cheat_add(const char *code) { return GB_import_cheat(gb, code, "", true) != NULL; }
+EMSCRIPTEN_KEEPALIVE void sb_cheats_clear(void) { GB_remove_all_cheats(gb); }

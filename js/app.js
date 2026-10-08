@@ -16,6 +16,9 @@ const App = {
         padMap: {},
         turboMode: 'hold',
         turboSpeed: '3',
+        slowSpeed: '0.5',
+        sgbBorders: true,
+        lang: '',
         scaleMode: 'fit',
         lcdEffect: false,
         smoothing: false,
@@ -39,6 +42,10 @@ const App = {
     running: false,
     menuOpen: false,
     turboToggled: false,
+    slowMotion: false,
+    rewinding: false,
+    screenW: 160,
+    screenH: 144,
     accumulator: 0,
     lastTime: 0,
 
@@ -52,6 +59,8 @@ const App = {
             this.settings.audioVersion = 2;
         }
         Analytics.init(this.settings);
+        I18n.init(this.settings.lang);
+        Engines.sgb = !!this.settings.sgbBorders;
         this.isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
         this.isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         this.isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -76,6 +85,9 @@ const App = {
             txtInput: document.getElementById('txt-input'),
             capturePop: document.getElementById('capture-pop'),
             cameraBtn: document.getElementById('camera-btn'),
+            gifBtn: document.getElementById('gif-btn'),
+            langBtn: document.getElementById('lang-btn'),
+            rec: document.getElementById('rec'),
         };
         // iOS greys out files with unknown extensions when "accept" is set.
         if (!this.isIOS) {
@@ -218,7 +230,8 @@ const App = {
 
     // Geometry of the screen box (screen + bezel + logo) at scale 1.
     screenBox() {
-        const framed = !!this.settings.frame;
+        // The Super Game Boy border is a frame of its own.
+        const framed = !!this.settings.frame && this.screenW === 160;
         const portrait = this.orientation === 'portrait';
         // Bezel around the screen, as a fraction of the screen size (DMG proportions).
         const box = {
@@ -228,8 +241,8 @@ const App = {
             padBottom: framed ? 0.1 : 0,
             brand: framed && portrait ? 0.14 : 0,
         };
-        box.w = Display.width * (1 + box.padX * 2);
-        box.h = Display.height * (1 + box.padTop + box.padBottom + box.brand);
+        box.w = this.screenW * (1 + box.padX * 2);
+        box.h = this.screenH * (1 + box.padTop + box.padBottom + box.brand);
         return box;
     },
 
@@ -301,6 +314,18 @@ const App = {
         };
     },
 
+    // Picture size of the running game: 160x144, or 256x224 with a Super Game Boy border.
+    setScreenSize(width, height) {
+        if (width === this.screenW && height === this.screenH) {
+            return;
+        }
+        this.screenW = width;
+        this.screenH = height;
+        this.el.canvas.width = width;
+        this.el.canvas.height = height;
+        this.layout();
+    },
+
     layout() {
         const W = this.el.app.clientWidth;
         const H = this.el.app.clientHeight;
@@ -315,8 +340,8 @@ const App = {
         const { scale } = place;
         const boxLeft = place.left;
         const boxTop = place.top;
-        const w = Math.round(Display.width * scale);
-        const h = Math.round(Display.height * scale);
+        const w = Math.round(this.screenW * scale);
+        const h = Math.round(this.screenH * scale);
         const totalW = w * (1 + box.padX * 2);
         const left = boxLeft + w * box.padX;
         const top = boxTop + h * box.padTop;
@@ -491,9 +516,26 @@ const App = {
             return;
         }
 
+        // Rewind: while held, step back through the recent history.
+        const rewind = Input.rewindHeld && !!this.engine.rewindStep;
+        if (rewind || this.rewinding) {
+            this.setSpeedIndicator(rewind ? 'rewind' : null);
+            this.rewinding = rewind;
+            this.accumulator = 0;
+            if (rewind) {
+                if (!this.engine.rewindStep() && !this.rewindEndShown) {
+                    this.rewindEndShown = true;
+                    this.toast('No se puede rebobinar más');
+                }
+                this.engine.present();
+                this.recordFrame();
+                return;
+            }
+            this.rewindEndShown = false;
+        }
         const turbo = Input.turboHeld || this.turboToggled;
-        const speed = turbo ? Number(this.settings.turboSpeed) : 1;
-        this.el.turboIndicator.classList.toggle('on', turbo);
+        const speed = turbo ? Number(this.settings.turboSpeed) : this.slowMotion ? Number(this.settings.slowSpeed) || 0.5 : 1;
+        this.setSpeedIndicator(turbo ? 'turbo' : this.slowMotion ? 'slow' : null);
         this.accumulator += Math.min(dt, 100) * speed;
         const maxFrames = 2 + speed * 2;
         let frames = 0;
@@ -509,8 +551,29 @@ const App = {
         }
         this.engine.present();
         this.engine.endFrames(speed);
+        this.recordFrame();
         this.countFps(frames, now);
         this.periodicSave(now);
+    },
+
+    setSpeedIndicator(mode) {
+        if (this.speedMode === mode) {
+            return;
+        }
+        this.speedMode = mode;
+        const el = this.el.turboIndicator;
+        el.classList.toggle('on', !!mode);
+        el.textContent = { turbo: '⏩', rewind: '⏪', slow: '🐢' }[mode] || '⏩';
+    },
+
+    toggleSlowMotion() {
+        if (!this.engine) {
+            return;
+        }
+        this.slowMotion = !this.slowMotion;
+        this.turboToggled = false;
+        this.toast(this.slowMotion ? 'Cámara lenta: ' + this.settings.slowSpeed.replace('.', ',') + '×' : 'Velocidad normal');
+        Controls.update();
     },
 
     runFrame() {
@@ -542,6 +605,8 @@ const App = {
                 this.saveState('1');
             } else if (!this.menuOpen && this.engine && action === 'load') {
                 this.loadState('1');
+            } else if (!this.menuOpen && this.engine && action === 'slow') {
+                this.toggleSlowMotion();
             } else if (source === 'pad' && this.menuOpen && action === 'start' && this.engine && this.page === 'main') {
                 this.closeMenu();
             }
@@ -981,6 +1046,9 @@ const App = {
         this.accumulator = 0;
         this.lastAutoState = 0;
         this.turboToggled = false;
+        this.slowMotion = false;
+        this.setScreenSize(engine.width || 160, engine.height || 144);
+        this.applyCheats(true);
         await this.loadSram(engine, info);
         engine.setPalette(this.settings);
         this.updateVolume();
@@ -1111,6 +1179,7 @@ const App = {
     },
 
     stopGame() {
+        this.stopRecording(true);
         if (this.engine && this.running) {
             this.persistNow();
         }
@@ -1175,7 +1244,9 @@ const App = {
             }
         }
         this.openMenu();
-        this.showWelcome();
+        if (!this.openSharedLink()) {
+            this.showWelcome();
+        }
     },
 
     // ------------------------------------------------------------------- audio
@@ -1354,6 +1425,9 @@ const App = {
 
     // -------------------------------------------------------------------- menu
     openMenu(page = 'main') {
+        if (this.recording) {
+            this.stopRecording();
+        }
         this.menuOpen = true;
         Controls.releaseAll();
         Input.releaseAll();
@@ -1386,6 +1460,7 @@ const App = {
         palette: 'interface',
         skin: 'interface',
         mapping: 'controls',
+        cheats: 'main',
     },
 
     showPage(page) {
@@ -1416,6 +1491,7 @@ const App = {
             mapping: () => this.renderMapping(),
             skin: () => this.renderSkins(),
             about: () => this.renderAbout(),
+            cheats: () => this.renderCheats(),
         }[page];
         if (render) {
             render();
@@ -1428,6 +1504,7 @@ const App = {
         this.el.menu.querySelectorAll('[data-needs-game]').forEach((el) => { el.disabled = !hasGame; });
         this.el.menu.querySelectorAll('[data-no-game]').forEach((el) => { el.hidden = hasGame; });
         this.el.cameraBtn.hidden = !hasGame;
+        this.el.gifBtn.hidden = !hasGame;
     },
 
     renderMain() {
@@ -1451,15 +1528,15 @@ const App = {
                 <div class="cover"><span class="cover-ph"></span></div>
                 <div class="rom-info">
                     <small class="now-label">Jugando</small>
-                    <strong></strong>
-                    <small class="meta"></small>
+                    <strong data-no-i18n></strong>
+                    <small class="meta" data-no-i18n></small>
                 </div>
                 <div class="lib-actions">
-                    ${entry ? `<button type="button" class="fav${entry.fav ? ' on' : ''}" data-action="lib-fav" aria-label="Favorito">${entry.fav ? '★' : '☆'}</button>
+                    ${entry ? `<span class="icon-col"><button type="button" class="fav${entry.fav ? ' on' : ''}" data-action="lib-fav" aria-label="Favorito">${entry.fav ? '★' : '☆'}</button>${Library.canShare(entry) ? Library.shareButton : ''}</span>
                     <button type="button" class="btn ghost small more" data-action="lib-edit" aria-label="Ficha del juego">⋯</button>` : ''}
                 </div>
             </div>
-            <p class="desc"></p>`;
+            <p class="desc" data-no-i18n></p>`;
         card.querySelectorAll('[data-action]').forEach((button) => { button.dataset.id = entry.id; });
         const title = (entry && entry.title) || this.game.title;
         card.querySelector('strong').textContent = title;
@@ -1488,7 +1565,7 @@ const App = {
     },
 
     formatDate(time) {
-        return new Date(time).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' });
+        return new Date(time).toLocaleString(I18n.locale, { dateStyle: 'short', timeStyle: 'short' });
     },
 
     // --- Import page ---
@@ -1899,6 +1976,278 @@ const App = {
         visible.disabled = id === 'menu';
     },
 
+    // ------------------------------------------------------------------ cheats
+    // Game Genie / GameShark codes, saved per game (by ROM id).
+    cheats() {
+        return this.game ? Store.getJSON('cheats:' + this.game.id, []) : [];
+    },
+
+    saveCheats(list) {
+        Store.setJSON('cheats:' + this.game.id, list);
+        this.applyCheats();
+        this.renderCheats();
+    },
+
+    applyCheats(quiet) {
+        if (!this.engine || !this.engine.setCheats) {
+            return;
+        }
+        const active = this.cheats().filter((cheat) => cheat.on);
+        // A cheat can hold several codes separated by spaces.
+        const invalid = this.engine.setCheats(active.flatMap((cheat) => cheat.code.split(' ').filter(Boolean)));
+        if (invalid.length && !quiet) {
+            this.toast('⚠️ Código no válido: ' + invalid.join(', '), 4000);
+        } else if (active.length && quiet) {
+            this.toast(active.length === 1 ? '1 truco activo' : active.length + ' trucos activos');
+        }
+    },
+
+    addCheat() {
+        const codeInput = document.getElementById('cheat-code');
+        const nameInput = document.getElementById('cheat-name');
+        // Several codes can be pasted at once, separated by spaces, commas or lines.
+        const codes = codeInput.value.split(/[\s,;+]+/).map((code) => Cheats.normalize(code)).filter(Boolean);
+        if (!codes.length) {
+            this.toast('Escribe un código Game Genie o GameShark');
+            return;
+        }
+        const invalid = codes.filter((code) => !Cheats.parse(code));
+        if (invalid.length) {
+            this.toast('⚠️ Código no válido: ' + invalid.join(', '), 4000);
+            return;
+        }
+        const list = this.cheats();
+        list.push({ code: codes.join(' '), name: nameInput.value.trim().slice(0, 60), on: true });
+        codeInput.value = '';
+        nameInput.value = '';
+        this.saveCheats(list);
+        Analytics.event('cheat_add', { game_title: this.game.title });
+    },
+
+    toggleCheat(index, on) {
+        const list = this.cheats();
+        if (list[index]) {
+            list[index].on = on;
+            this.saveCheats(list);
+        }
+    },
+
+    removeCheat(index) {
+        const list = this.cheats();
+        list.splice(index, 1);
+        this.saveCheats(list);
+    },
+
+    renderCheats() {
+        const container = document.getElementById('cheat-list');
+        if (!container || !this.game) {
+            return;
+        }
+        document.getElementById('cheat-game').textContent = this.game.title;
+        const list = this.cheats();
+        container.innerHTML = list.length ? '' : '<p class="empty">Todavía no hay trucos para este juego.</p>';
+        list.forEach((cheat, index) => {
+            const row = document.createElement('div');
+            row.className = 'card cheat';
+            row.innerHTML = `
+                <div class="cheat-info"><strong></strong><code></code></div>
+                <input type="checkbox" class="toggle" data-action="cheat-toggle" aria-label="Activar truco">
+                <button type="button" class="btn ghost small" data-action="cheat-remove" aria-label="Eliminar truco">✕</button>`;
+            const name = row.querySelector('strong');
+            name.textContent = cheat.name || 'Truco ' + (index + 1);
+            if (cheat.name) {
+                name.dataset.noI18n = ''; // the user's own text
+            }
+            row.querySelector('code').textContent = cheat.code;
+            const toggle = row.querySelector('input');
+            toggle.checked = !!cheat.on;
+            row.querySelectorAll('[data-action]').forEach((el) => { el.dataset.index = index; });
+            container.appendChild(row);
+        });
+    },
+
+    // -------------------------------------------------------------- share link
+    // ?play=<rom url>&t=<title>&img=<cover>&y=<year>&g=<genre> adds the game to the
+    // library (if needed) and offers to play it.
+    openSharedLink() {
+        const params = new URLSearchParams(location.search);
+        const url = params.get('play');
+        if (!url) {
+            return false;
+        }
+        history.replaceState(null, '', location.pathname + location.hash);
+        if (!Library.isLink(url)) {
+            this.toast('⚠️ El enlace compartido no es válido', 4000);
+            return false;
+        }
+        const key = Library.urlKey(url);
+        let entry = Library.list().find((item) => item.url && Library.urlKey(item.url) === key);
+        if (!entry) {
+            const clean = (name, max) => Library.cleanField(params.get(name) || '').slice(0, max);
+            const values = {
+                url,
+                title: clean('t', 120) || Library.nameFromUrl(url),
+                image: Library.safeImage(params.get('img') || ''),
+                year: clean('y', 60),
+                genre: clean('g', 60),
+                collection: 'Compartidos',
+            };
+            Object.keys(values).forEach((name) => { if (!values[name]) delete values[name]; });
+            Library.apply({ entries: [{ values }], errors: [] });
+            entry = Library.find(Library.idForUrl(key));
+        }
+        if (!entry) {
+            return false;
+        }
+        this.sharedEntry = entry.id;
+        Analytics.event('share_open', { game_title: entry.title });
+        const dialog = document.getElementById('share-dialog');
+        dialog.querySelector('#share-title').textContent = entry.title;
+        const meta = [entry.year, entry.genre].filter(Boolean).join(' · ');
+        dialog.querySelector('#share-meta').textContent = meta;
+        const cover = dialog.querySelector('.share-cover');
+        cover.innerHTML = '';
+        Library.coverOf(entry).then((src) => {
+            if (src) {
+                const img = document.createElement('img');
+                img.alt = '';
+                img.onerror = () => img.remove();
+                img.src = src;
+                cover.appendChild(img);
+            }
+        });
+        dialog.hidden = false;
+        Store.setJSON('welcomed', true);
+        return true;
+    },
+
+    async playShared() {
+        document.getElementById('share-dialog').hidden = true;
+        const id = this.sharedEntry;
+        this.sharedEntry = null;
+        if (id && await Library.play(id)) {
+            this.closeMenu();
+        }
+    },
+
+    // -------------------------------------------------------------- GIF clips
+    startRecording() {
+        if (!this.engine) {
+            return;
+        }
+        this.recording = { frames: [], tick: 0, started: performance.now() };
+        this.el.rec.hidden = false;
+        this.el.rec.querySelector('span').textContent = '0:00';
+        this.closeMenu();
+        this.toast('Grabando GIF · toca ● REC o abre el menú para terminar', 3000);
+    },
+
+    // Called after each drawn frame: keeps one frame of every 3 (20 per second).
+    recordFrame() {
+        const rec = this.recording;
+        if (!rec || rec.tick++ % 3 !== 0) {
+            return;
+        }
+        const canvas = this.el.canvas;
+        rec.frames.push(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
+        const seconds = Math.floor(rec.frames.length / 20);
+        this.el.rec.querySelector('span').textContent = '0:' + String(seconds).padStart(2, '0');
+        if (rec.frames.length >= this.gifMaxFrames) {
+            this.stopRecording();
+        }
+    },
+
+    gifMaxFrames: 20 * 15,
+
+    async stopRecording(discard) {
+        const rec = this.recording;
+        if (!rec) {
+            return;
+        }
+        this.recording = null;
+        this.el.rec.hidden = true;
+        if (discard || rec.frames.length < 4) {
+            if (!discard) {
+                this.toast('Grabación demasiado corta');
+            }
+            return;
+        }
+        // Frames must all have the same size (the picture can change with a SGB border).
+        const { width, height } = rec.frames[rec.frames.length - 1];
+        const frames = rec.frames.filter((frame) => frame.width === width && frame.height === height);
+        this.toast('Creando GIF… 0 %', 60000);
+        try {
+            const blob = await GifEncoder.encode(frames, {
+                scale: width > 160 ? 1 : 2,
+                delay: 5,
+                onProgress: (p) => this.toast('Creando GIF… ' + Math.round(p * 100) + ' %', 60000),
+            });
+            this.toast('GIF listo (' + this.formatSize(blob.size) + ')');
+            this.showGifDialog(blob);
+            Analytics.event('gif_record', { game_title: this.game ? this.game.title : '', seconds: Math.round(frames.length / 20) });
+        } catch (error) {
+            console.error(error);
+            this.toast('⚠️ No se pudo crear el GIF', 4000);
+        }
+    },
+
+    gifName() {
+        const title = (this.game && this.game.title) || 'gboy-js';
+        return title.replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '') + '-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.gif';
+    },
+
+    showGifDialog(blob) {
+        this.gif = { blob, file: new File([blob], this.gifName(), { type: 'image/gif' }) };
+        const dialog = document.getElementById('gif-dialog');
+        const img = dialog.querySelector('img');
+        if (this.gifUrl) {
+            URL.revokeObjectURL(this.gifUrl);
+        }
+        this.gifUrl = URL.createObjectURL(blob);
+        img.src = this.gifUrl;
+        const canShare = !!(navigator.canShare && navigator.canShare({ files: [this.gif.file] }));
+        dialog.querySelector('[data-action="gif-share"]').hidden = !canShare;
+        dialog.hidden = false;
+    },
+
+    async shareGif() {
+        if (!this.gif) {
+            return;
+        }
+        try {
+            await navigator.share({ files: [this.gif.file], title: 'GBoy-JS' });
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                this.saveGif();
+            }
+        }
+    },
+
+    saveGif() {
+        if (!this.gif) {
+            return;
+        }
+        const link = document.createElement('a');
+        link.href = this.gifUrl;
+        link.download = this.gif.file.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    },
+
+    closeGifDialog() {
+        document.getElementById('gif-dialog').hidden = true;
+        this.gif = null;
+    },
+
+    // ---------------------------------------------------------------- language
+    toggleLanguage() {
+        this.settings.lang = I18n.lang === 'es' ? 'en' : 'es';
+        this.saveSettings();
+        I18n.setLanguage(this.settings.lang);
+        Analytics.event('language', { lang: this.settings.lang });
+    },
+
     // ----------------------------------------------------------------- events
     bindEvents() {
         const menu = this.el.menu;
@@ -2067,7 +2416,7 @@ const App = {
             }
             this.unlockAudio();
             for (const action of actions) {
-                if (Input.buttons.includes(action) || action === 'turbo') {
+                if (Input.buttons.includes(action) || action === 'turbo' || action === 'rewind') {
                     if (!this.menuOpen) {
                         Input.keys[action] = true;
                     }
@@ -2220,6 +2569,10 @@ const App = {
             this.setupAudioOutput();
             this.unlockAudio();
         }
+        if (name === 'sgbBorders') {
+            Engines.sgb = !!value;
+            this.toast('Se aplica la próxima vez que abras un juego', 3000);
+        }
     },
 
     async handleAction(action, target) {
@@ -2333,6 +2686,43 @@ const App = {
                 }
                 break;
             }
+            case 'lib-share':
+                Library.share(target.dataset.id);
+                break;
+            case 'cheat-add':
+                this.addCheat();
+                break;
+            case 'cheat-toggle':
+                this.toggleCheat(Number(target.dataset.index), target.checked);
+                break;
+            case 'cheat-remove':
+                this.removeCheat(Number(target.dataset.index));
+                break;
+            case 'gif':
+                this.startRecording();
+                break;
+            case 'rec-stop':
+                this.stopRecording();
+                break;
+            case 'gif-share':
+                this.shareGif();
+                break;
+            case 'gif-save':
+                this.saveGif();
+                break;
+            case 'gif-close':
+                this.closeGifDialog();
+                break;
+            case 'share-play':
+                this.playShared();
+                break;
+            case 'share-cancel':
+                document.getElementById('share-dialog').hidden = true;
+                this.sharedEntry = null;
+                break;
+            case 'lang':
+                this.toggleLanguage();
+                break;
             case 'lib-edit':
                 Library.editingId = target.dataset.id;
                 this.showPage('entry');

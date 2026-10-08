@@ -600,9 +600,10 @@ class Sound {
         if (this.nextPush >= now) {
             const bufferSource = Sound.ctx.createBufferSource();
             bufferSource.buffer = this.buffer;
+            bufferSource.playbackRate.value = Sound.rate; // < 1 in slow motion
             bufferSource.connect(this.gainNode);
             bufferSource.start(this.nextPush);
-            this.nextPush += Sound.bufferDuration;
+            this.nextPush += Sound.bufferDuration / Sound.rate;
 
             this.buffer = Sound.ctx.createBuffer(2, Sound.bufferSamples, Sound.sampleFrequency);
             this.bufferLeft = this.buffer.getChannelData(0);
@@ -674,3 +675,4 @@ Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
 // Where the engines send their sound: the AudioContext's speakers, or (see
 // App.setupAudioOutput) a stream played by an <audio> element.
 Sound.output = null;
+Sound.rate = 1;
