@@ -345,6 +345,7 @@ const Library = {
         }
         const result = this.apply(parsed);
         if (result) {
+            Analytics.event('list_import', { list: 'games.txt', added: result.added, updated: result.updated });
             this.app.toast(`Lista importada: ${result.added} nuevos, ${result.updated} actualizados` +
                 (parsed.errors.length ? ` · ${parsed.errors.length} líneas con errores` : ''), 4000);
         }

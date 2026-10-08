@@ -394,6 +394,13 @@
                         en localStorage.</p>
                     <div id="storage-info" class="note"></div>
 
+                    <h2>Privacidad</h2>
+                    <label class="row check"><span>Enviar estadísticas de uso anónimas</span>
+                        <input type="checkbox" class="toggle" data-setting="analytics"></label>
+                    <p class="note">Usamos Google Analytics para saber cuánto se usa GBoy-JS y qué funciones se
+                        aprovechan (por ejemplo, qué juegos se inician o qué listas se importan). No se envían tus ROMs,
+                        partidas ni datos personales, y no se usa para publicidad.</p>
+
                     <h2>Copia de seguridad</h2>
                     <p class="note">Exporta tus ajustes (controles, mandos, paleta, aspecto, pantalla y tema) y tu
                         biblioteca (fichas, colecciones, favoritos y portadas) a un archivo .json para guardarlos o
@@ -447,6 +454,19 @@
             </div>
         </div>
 
+        <!-- First-run welcome -->
+        <div id="welcome" hidden>
+            <div class="welcome-box" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+                <img src="img/icon-192.png" alt="" width="72" height="72">
+                <h2 id="welcome-title">¡Bienvenido a GBoy-JS!</h2>
+                <p>Entra en la sección <strong>Juegos</strong> para comenzar.&nbsp;:-)</p>
+                <div class="editor-actions">
+                    <button type="button" class="btn ghost" data-action="welcome-close">Cerrar</button>
+                    <button type="button" class="btn primary" data-action="welcome-games">Ir a Juegos</button>
+                </div>
+            </div>
+        </div>
+
         <input type="file" id="rom-input" hidden>
         <input type="file" id="sav-input" hidden>
         <input type="file" id="settings-input" hidden>
@@ -468,6 +488,7 @@
     <script src="js/dpad.js" defer></script>
     <script src="js/gamepad.js" defer></script>
     <script src="js/engines.js" defer></script>
+    <script src="js/analytics.js" defer></script>
     <script src="js/library.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>

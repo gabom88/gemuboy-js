@@ -7,11 +7,11 @@
 **Emulador de Game Boy y Game Boy Color para el móvil, directamente en el navegador.**
 Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y Android.
 
-## ▶️ [Jugar ahora: gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)
+## ▶️ [Jugar ahora: gboy-js.web.app](https://gboy-js.web.app/)
 
-[![Abrir GBoy-JS](https://img.shields.io/badge/ABRIR%20EMULADOR-gabom88.github.io%2Fgemuboy--js-8bac0f?style=for-the-badge&logo=googlechrome&logoColor=white)](https://gabom88.github.io/gemuboy-js/)
+[![Abrir GBoy-JS](https://img.shields.io/badge/ABRIR%20EMULADOR-gboy--js.web.app-8bac0f?style=for-the-badge&logo=googlechrome&logoColor=white)](https://gboy-js.web.app/)
 
-<a href="https://gabom88.github.io/gemuboy-js/"><img src="docs/screenshots/qr.png" width="160" alt="Código QR para abrir GBoy-JS en el móvil"></a><br>
+<a href="https://gboy-js.web.app/"><img src="docs/screenshots/qr.png" width="160" alt="Código QR para abrir GBoy-JS en el móvil"></a><br>
 <sub>Escanea el código con la cámara del móvil para abrirlo</sub>
 
 </div>
@@ -41,7 +41,7 @@ Instalable como app (PWA) · funciona sin conexión · optimizado para iPhone y 
 
 | iPhone / iPad (Safari) | Android (Chrome) |
 | --- | --- |
-| 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Safari | 1. Abre **[gabom88.github.io/gemuboy-js](https://gabom88.github.io/gemuboy-js/)** en Chrome |
+| 1. Abre **[gboy-js.web.app](https://gboy-js.web.app/)** en Safari | 1. Abre **[gboy-js.web.app](https://gboy-js.web.app/)** en Chrome |
 | 2. Pulsa **Compartir** ⎋ | 2. Pulsa **Instalar** (o menú ⋮ → **Instalar aplicación**) |
 | 3. Elige **«Añadir a pantalla de inicio»** | 3. Abre GBoy-JS desde el icono |
 
@@ -162,9 +162,22 @@ recompilarlo hace falta [Emscripten](https://emscripten.org/) (`emcc`) y Python 
 La interfaz en C está en [`wasm/sameboy_glue.c`](wasm/sameboy_glue.c) y los boot ROMs de código
 abierto de SameBoy en [`wasm/bootroms/`](wasm/bootroms/).
 
-**Publicación:** el workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) publica la
-app en GitHub Pages en cada push a `master`. Requiere activar una sola vez
-**Settings → Pages → Build and deployment → Source: GitHub Actions**.
+**Publicación (Firebase Hosting, proyecto `gboy-js`):**
+[`scripts/build-site.sh`](scripts/build-site.sh) genera el sitio en `_site/` y
+[`.github/workflows/firebase.yml`](.github/workflows/firebase.yml) lo publica en cada push a `master`.
+Cada pull request recibe además una URL de vista previa temporal
+([`firebase-preview.yml`](.github/workflows/firebase-preview.yml)). Configuración inicial (una sola vez):
+
+1. Crea una clave de cuenta de servicio para el proyecto: `firebase init hosting:github` la crea y la guarda
+   sola como secreto del repositorio; o bien, a mano, en Google Cloud → IAM → Cuentas de servicio (rol
+   *Firebase Hosting Admin*) → Claves → JSON.
+2. Guárdala en GitHub → Settings → Secrets and variables → Actions con el nombre
+   `FIREBASE_SERVICE_ACCOUNT_GBOY_JS`.
+
+Para publicar a mano: `./scripts/build-site.sh && firebase deploy --only hosting`.
+
+**Estadísticas:** la app usa Google Analytics 4 (`G-6Y61JC2QR9`) mediante [`js/analytics.js`](js/analytics.js),
+sin señales publicitarias y nunca en `localhost`. Se puede desactivar en **Ajustes → Privacidad**.
 
 ---
 

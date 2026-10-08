@@ -1,1 +1,3 @@
 wasm/.build/
+_site/
+.firebase/

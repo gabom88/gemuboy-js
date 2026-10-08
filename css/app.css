@@ -2445,3 +2445,74 @@ a.btn.block[hidden],
         display: none;
     }
 }
+
+/* Running game at the top of the menu */
+#now-playing .now-card {
+    margin: 2px 0 12px;
+}
+
+.now-card .cover {
+    cursor: default;
+}
+
+.now-card .now-label {
+    color: var(--accent-2);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.now-card .desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.now-card .desc[hidden] {
+    display: none;
+}
+
+/* First-run welcome */
+#welcome {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: var(--scrim);
+    animation: fade .2s ease;
+}
+
+#welcome[hidden] {
+    display: none;
+}
+
+.welcome-box {
+    width: min(360px, 100%);
+    padding: 22px 20px 18px;
+    border-radius: 20px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    box-shadow: 0 14px 40px var(--shadow);
+    text-align: center;
+    animation: slide .25s ease;
+}
+
+.welcome-box img {
+    border-radius: 16px;
+}
+
+.welcome-box h2 {
+    margin: 10px 0 6px;
+    font-size: 20px;
+}
+
+.welcome-box p {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 16px;
+}
