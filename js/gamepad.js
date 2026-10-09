@@ -178,10 +178,11 @@ const Controls = {
             start: { x: 0.57, y: 0.895 },
             // Bottom corners: rewind and slow motion on the left, turbo on the right.
             // The menu button sits centered just above the top of the d-pad.
-            rewind: { x: 0.08, y: 0.955 },
-            slow: { x: 0.2, y: 0.955 },
-            turbo: { x: 0.92, y: 0.955 },
-            menu: { x: 0.5, y: 0.6, aboveDpad: true },
+            // These four small buttons are 50 % transparent by default.
+            rewind: { x: 0.08, y: 0.955, opacity: 0.5 },
+            slow: { x: 0.2, y: 0.955, opacity: 0.5 },
+            turbo: { x: 0.92, y: 0.955, opacity: 0.5 },
+            menu: { x: 0.5, y: 0.6, aboveDpad: true, opacity: 0.5 },
         },
         landscape: {
             dpad: { x: 0.12, y: 0.6 },
@@ -189,10 +190,10 @@ const Controls = {
             b: { x: 0.81, y: 0.66 },
             select: { x: 0.12, y: 0.92 },
             start: { x: 0.88, y: 0.92 },
-            turbo: { x: 0.93, y: 0.13 },
-            rewind: { x: 0.84, y: 0.13 },
-            slow: { x: 0.16, y: 0.13 },
-            menu: { x: 0.07, y: 0.13 },
+            turbo: { x: 0.93, y: 0.13, opacity: 0.5 },
+            rewind: { x: 0.84, y: 0.13, opacity: 0.5 },
+            slow: { x: 0.16, y: 0.13, opacity: 0.5 },
+            menu: { x: 0.07, y: 0.13, opacity: 0.5 },
         },
     },
 

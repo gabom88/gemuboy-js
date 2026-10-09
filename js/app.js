@@ -9,7 +9,7 @@ const App = {
         audioOutput: 'auto',
         vibration: true,
         touchControls: 'auto',
-        opacity: 50,
+        opacity: 100,
         skin: 'dmg',
         frame: true,
         keyMap: {},
@@ -58,13 +58,14 @@ const App = {
             this.settings.ignoreSilentSwitch = true;
             this.settings.audioVersion = 2;
         }
-        // v2 of the touch controls: new default places for rewind, slow motion,
-        // turbo and menu, and 50 % opacity unless the player had changed it.
-        if ((this.settings.controlsVersion || 1) < 2) {
-            if (this.settings.opacity === 100) {
-                this.settings.opacity = 50;
+        // v3 of the touch controls: the overall opacity is back to 100 % (v2 had
+        // lowered it to 50 %); only rewind, turbo, slow motion and menu are at 50 %
+        // by default (their own transparency, see Controls.defaultLayouts).
+        if ((this.settings.controlsVersion || 1) < 3) {
+            if (this.settings.controlsVersion === 2 && this.settings.opacity === 50) {
+                this.settings.opacity = 100;
             }
-            this.settings.controlsVersion = 2;
+            this.settings.controlsVersion = 3;
         }
         // Anonymous statistics are always on (the option was removed).
         this.settings.analytics = true;
