@@ -1253,7 +1253,16 @@ const App = {
     // Called on every touch, click and key press. iOS only lets audio start (or
     // come back after switching apps) inside a user gesture, so each gesture
     // resumes it, re-primes it and, if iOS left it stuck, rebuilds it.
-    unlockAudio() {
+    // activation: called from touchend / pointerup / click / keydown, the only
+    // events in which iOS lets a new AudioContext start.
+    unlockAudio(activation = false) {
+        // After a long time in the background or with the iPhone locked, iOS can
+        // leave the audio "running" but silent: the first touch rebuilds it.
+        if (this.audioStale && activation) {
+            this.audioStale = false;
+            this.hardResetAudio();
+            return;
+        }
         this.applyAudioSession();
         if (this.mediaEl && Sound.output && this.mediaEl.paused) {
             this.mediaEl.play().catch(() => {});
@@ -1307,6 +1316,44 @@ const App = {
         this.updateVolume();
     },
 
+    // Forced restart of the sound: a brand-new AudioContext and <audio> elements,
+    // reconnected to the running game. Must run inside a touch (iOS). Used when
+    // the player taps the game screen and after long breaks (audioStale).
+    hardResetAudio({ notify = false } = {}) {
+        const now = performance.now();
+        if (now - (this.lastHardReset || 0) < 1500) {
+            return;
+        }
+        this.lastHardReset = now;
+        for (const name of ['mediaEl', 'silentAudio']) {
+            const el = this[name];
+            if (el) {
+                try {
+                    el.pause();
+                    el.srcObject = null;
+                    el.removeAttribute('src');
+                    el.load();
+                } catch (ignored) { }
+                this[name] = null;
+            }
+        }
+        // Re-announcing the audio session wakes it up on iOS 17+.
+        if (navigator.audioSession) {
+            try {
+                navigator.audioSession.type = 'auto';
+            } catch (ignored) { }
+        }
+        this.applyAudioSession();
+        this.recreateAudio();
+        if (this.mediaEl) {
+            this.mediaEl.play().catch(() => {});
+        }
+        this.playSilentLoop();
+        if (notify) {
+            this.toast('🔊 Sonido reiniciado');
+        }
+    },
+
     // "media": the sound goes through an <audio> element (a MediaStream), the
     // channel iOS uses for music and video. It plays on iPhones where Web Audio
     // stays silent, at the cost of a little more latency. "auto" uses it on iOS.
@@ -1348,7 +1395,7 @@ const App = {
     watchAudio() {
         Sound.ctx.onstatechange = () => {
             if (Sound.ctx.state !== 'running' && !document.hidden && this.running && !this.isPaused()) {
-                this.toast('🔇 Toca la pantalla para reactivar el sonido', 3000);
+                this.toast('🔇 Toca la pantalla del juego para reactivar el sonido', 3000);
             }
         };
     },
@@ -2434,12 +2481,19 @@ const App = {
         this.watchAudio();
         this.setupAudioOutput();
         ['touchend', 'pointerup', 'click', 'keydown'].forEach((type) => {
-            document.addEventListener(type, () => this.unlockAudio(), { passive: true });
+            document.addEventListener(type, () => this.unlockAudio(true), { passive: true });
+        });
+        // Without touch controls covering it, a click on the screen also restarts the sound.
+        this.el.screen.addEventListener('click', () => {
+            if (this.engine && !this.menuOpen) {
+                this.hardResetAudio({ notify: true });
+            }
         });
 
         // Lifecycle: save whenever the app may be closed.
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
+                this.hiddenAt = Date.now();
                 if (this.mediaEl) {
                     this.mediaEl.pause();
                 }
@@ -2452,16 +2506,26 @@ const App = {
                 if (Sound.ctx.state !== 'running' && !this.menuOpen) {
                     Sound.ctx.resume().catch(() => {});
                 }
+                // Away for more than 20 s (another app, locked iPhone): rebuild the
+                // sound on the next touch even if it looks fine.
+                if (this.hiddenAt && Date.now() - this.hiddenAt > 20000) {
+                    this.audioStale = true;
+                }
                 // Coming back from another app: if iOS kept the audio stopped,
                 // the next touch brings it back (see unlockAudio).
                 setTimeout(() => {
                     if (Sound.ctx.state !== 'running' && this.running && !this.isPaused()) {
-                        this.toast('🔇 Toca la pantalla para reactivar el sonido', 3000);
+                        this.toast('🔇 Toca la pantalla del juego para reactivar el sonido', 3000);
                     }
                 }, 600);
             }
         });
         addEventListener('pagehide', () => this.persistNow());
+        addEventListener('pageshow', (ev) => {
+            if (ev.persisted) {
+                this.audioStale = true; // restored from the back/forward cache
+            }
+        });
         addEventListener('beforeunload', () => this.persistNow());
         document.addEventListener('freeze', () => this.persistNow());
 

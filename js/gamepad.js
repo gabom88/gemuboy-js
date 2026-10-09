@@ -443,6 +443,15 @@ const Controls = {
         }
         const control = this.hitControl(x, y, Object.keys(this.rects));
         if (!control) {
+            // A tap on the game screen restarts the sound (on release: iOS only
+            // lets audio start on touchend / pointerup).
+            const screen = this.app.el.screen.getBoundingClientRect();
+            const layer = this.layer.getBoundingClientRect();
+            const sx = x + layer.left;
+            const sy = y + layer.top;
+            if (sx >= screen.left && sx <= screen.right && sy >= screen.top && sy <= screen.bottom) {
+                this.pointers.set(ev.pointerId, { control: 'screen', x, y });
+            }
             return;
         }
         if (control === 'menu') {
@@ -492,6 +501,9 @@ const Controls = {
         }
         pointer.x = x;
         pointer.y = y;
+        if (pointer.control === 'screen') {
+            return;
+        }
         if (!['dpad', 'menu', 'turbo', 'rewind', 'slow'].includes(pointer.control)) {
             // Allow sliding a finger between face buttons.
             const control = this.hitControl(x, y, ['a', 'b', 'start', 'select']);
@@ -511,6 +523,12 @@ const Controls = {
             return;
         }
         this.pointers.delete(ev.pointerId);
+        if (pointer.control === 'screen') {
+            if (ev.type === 'pointerup' && this.app.engine) {
+                this.app.hardResetAudio({ notify: true });
+            }
+            return;
+        }
         if (pointer.control === 'menu') {
             this.elements.menu.classList.remove('pressed');
             if (ev.type === 'pointerup') {
