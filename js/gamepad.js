@@ -176,10 +176,12 @@ const Controls = {
             b: { x: 0.65, y: 0.765 },
             select: { x: 0.37, y: 0.895 },
             start: { x: 0.57, y: 0.895 },
-            turbo: { x: 0.08, y: 0.575 },
-            rewind: { x: 0.2, y: 0.575 },
-            slow: { x: 0.8, y: 0.575 },
-            menu: { x: 0.92, y: 0.575 },
+            // Bottom corners: rewind and slow motion on the left, turbo on the right.
+            // The menu button sits centered just above the top of the d-pad.
+            rewind: { x: 0.08, y: 0.955 },
+            slow: { x: 0.2, y: 0.955 },
+            turbo: { x: 0.92, y: 0.955 },
+            menu: { x: 0.5, y: 0.6, aboveDpad: true },
         },
         landscape: {
             dpad: { x: 0.12, y: 0.6 },
@@ -265,6 +267,9 @@ const Controls = {
         settings.layouts = settings.layouts || {};
         const layouts = settings.layouts;
         layouts[this.orientation] = layouts[this.orientation] || {};
+        if ('x' in values || 'y' in values) {
+            values = Object.assign({ aboveDpad: false }, values); // placed by hand now
+        }
         layouts[this.orientation][id] = Object.assign({}, this.layout[id], values);
         this.app.saveSettings();
     },
@@ -299,6 +304,7 @@ const Controls = {
         const layout = this.layout;
         const globalOpacity = this.app.settings.opacity / 100;
         this.rects = {};
+        let dpadTop = null;
         for (const id of Object.keys(this.defs)) {
             const def = this.defs[id];
             const c = layout[id];
@@ -310,7 +316,12 @@ const Controls = {
             const minY = inset.top + h / 2;
             const maxY = H - inset.bottom - h / 2;
             const cx = Math.min(Math.max(c.x * W, minX), Math.max(minX, maxX));
-            const cy = Math.min(Math.max(c.y * H, minY), Math.max(minY, maxY));
+            // aboveDpad: right above the top of the d-pad, whatever the screen size.
+            const y = c.aboveDpad && dpadTop !== null ? dpadTop - h / 2 - unit * 1.5 : c.y * H;
+            const cy = Math.min(Math.max(y, minY), Math.max(minY, maxY));
+            if (id === 'dpad') {
+                dpadTop = cy - h / 2;
+            }
             const show = c.visible && (id === 'menu' || this.visibleTouch);
             el.style.width = w + 'px';
             el.style.height = h + 'px';
@@ -585,28 +596,38 @@ const Controls = {
 
     // --- Haptic feedback ---
     setupHaptics() {
-        // iOS Safari has no Vibration API; toggling a native switch input
-        // triggers the system haptic engine on iOS 18+.
-        if (!navigator.vibrate) {
-            const label = document.createElement('label');
-            label.className = 'haptic-switch';
-            label.innerHTML = '<input type="checkbox" switch tabindex="-1">';
-            document.body.appendChild(label);
-            this.hapticLabel = label;
-        }
+        this.iosHaptics = !navigator.vibrate && this.app.isIOS;
     },
 
+    // Android (Chrome, Edge, Samsung Internet): Vibration API. iOS Safari has no
+    // Vibration API; clicking the label of a native switch input makes iOS 18+
+    // play its system "tick". A fresh hidden switch is used each time, as the
+    // known working technique does.
     haptic() {
         if (!this.app.settings.vibration) {
             return;
         }
         if (navigator.vibrate) {
             try {
-                navigator.vibrate(12);
+                navigator.vibrate(25); // shorter pulses are too weak on many motors
             } catch (ignored) { }
-        } else if (this.hapticLabel) {
-            this.hapticLabel.click();
+            return;
         }
+        if (!this.iosHaptics) {
+            return;
+        }
+        try {
+            const label = document.createElement('label');
+            label.setAttribute('aria-hidden', 'true');
+            label.style.display = 'none';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.setAttribute('switch', '');
+            label.appendChild(input);
+            document.head.appendChild(label);
+            label.click();
+            label.remove();
+        } catch (ignored) { }
     },
 
     // --- Layout editor ---

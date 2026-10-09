@@ -478,11 +478,12 @@ body {
     z-index: 5;
     left: 50%;
     top: calc(env(safe-area-inset-top) + 8px);
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(var(--panel-y, 0px));
+    transition: transform .2s ease;
     width: min(420px, calc(100% - 16px));
     max-height: calc(50% - 16px);
     overflow-y: auto;
-    padding: 12px 14px;
+    padding: 12px 14px 0;
     background: var(--glass);
     color: var(--text);
     -webkit-backdrop-filter: blur(12px);
@@ -1538,6 +1539,112 @@ a.btn {
     --pill-hi: rgba(80, 82, 92, .9);
     --label: rgba(255, 255, 255, .8);
     --brand: rgba(255, 255, 255, .85);
+}
+
+/* Game Boy Pocket style shells: metallic and bright plastics, gray bezel */
+[data-skin^="pocket"] {
+    --sheen: linear-gradient(115deg, rgba(255, 255, 255, .3) 0%, rgba(255, 255, 255, 0) 32%, rgba(0, 0, 0, 0) 68%, rgba(0, 0, 0, .1) 100%);
+    --grain-opacity: .3;
+    --bz-text: "";
+    --stripe1: transparent;
+    --stripe2: transparent;
+}
+
+[data-skin="pocket-silver"] {
+    --body-bg: linear-gradient(170deg, #dfe1e5 0%, #c3c6cc 45%, #a9adb4 100%);
+    --label: #33363d;
+    --brand: #33363d;
+}
+
+[data-skin="pocket-gold"] {
+    --body-bg: linear-gradient(170deg, #ead08a 0%, #c9a548 50%, #a8842c 100%);
+    --bezel: #5d5340;
+    --bezel-2: #4a4232;
+    --label: #3a2a08;
+    --brand: #3a2a08;
+    --ab: #6b5320;
+    --ab-hi: #8a6e33;
+    --ab-lo: #4e3b14;
+    --ab-side: #36280c;
+}
+
+[data-skin="pocket-red"] {
+    --body-bg: linear-gradient(170deg, #e2454a 0%, #c8282e 55%, #a81c22 100%);
+    --bezel: #2a2a30;
+    --bezel-2: #1f1f24;
+    --label: rgba(255, 255, 255, .9);
+    --brand: rgba(255, 255, 255, .92);
+    --ab: #2f2f35;
+    --ab-hi: #4a4a52;
+    --ab-lo: #222227;
+    --ab-side: #111114;
+}
+
+[data-skin="pocket-pink"] {
+    --body-bg: linear-gradient(170deg, #f8bfd0 0%, #f0a0b8 55%, #dc86a0 100%);
+    --label: #5a1f36;
+    --brand: #5a1f36;
+    --ab: #d8467c;
+    --ab-hi: #ea6f9a;
+    --ab-lo: #b03062;
+    --ab-side: #861e48;
+}
+
+[data-skin="gbc-tangerine"] { --body-bg: linear-gradient(170deg, #ff9640 0%, #f47a1f 55%, #d86510 100%); }
+
+[data-skin="gbc-sky"] {
+    --body-bg: linear-gradient(170deg, #80cdf2 0%, #5bb8e8 55%, #3e9fd2 100%);
+    --label: #0d2a40;
+    --brand: #0d2a40;
+}
+
+/* Famicom colors: maroon body with golden labels */
+[data-skin="famicom"] {
+    --body-bg: linear-gradient(170deg, #a02830 0%, #8c1c22 55%, #74141a 100%);
+    --grain-opacity: .35;
+    --bezel: #e8e0cf;
+    --bezel-2: #d6ccb6;
+    --bezel-text: #8c1c22;
+    --bz-text: "";
+    --stripe1: #c9a548;
+    --stripe2: #c9a548;
+    --dpad: #2a2a2e;
+    --ab: #e0d6c0;
+    --ab-hi: #f4ecdb;
+    --ab-lo: #c4b89c;
+    --ab-side: #8f8468;
+    --pill: #c9a548;
+    --pill-hi: #dcbd6a;
+    --pill-lo: #a8842c;
+    --pill-text: #3a2a08;
+    --label: #e8c76a;
+    --brand: #e8c76a;
+}
+
+[data-skin="clear-ruby"] {
+    --body-bg: linear-gradient(160deg, rgba(255, 255, 255, .2) 0%, rgba(255, 255, 255, 0) 35%),
+        linear-gradient(rgba(180, 30, 60, .6), rgba(140, 15, 45, .7)), var(--pcb);
+    --dpad: rgba(60, 10, 20, .92);
+    --ab: rgba(210, 60, 90, .92);
+    --ab-hi: rgba(245, 150, 170, .95);
+    --ab-lo: rgba(120, 15, 40, .95);
+    --pill: rgba(130, 30, 50, .9);
+    --pill-hi: rgba(170, 60, 80, .9);
+    --label: rgba(255, 255, 255, .9);
+    --brand: rgba(255, 255, 255, .92);
+}
+
+[data-skin="clear-ocean"] {
+    --body-bg: linear-gradient(160deg, rgba(255, 255, 255, .2) 0%, rgba(255, 255, 255, 0) 35%),
+        linear-gradient(rgba(40, 110, 180, .6), rgba(25, 80, 150, .7)), var(--pcb);
+    --dpad: rgba(10, 30, 60, .92);
+    --ab: rgba(70, 140, 210, .92);
+    --ab-hi: rgba(160, 205, 245, .95);
+    --ab-lo: rgba(20, 70, 130, .95);
+    --pill: rgba(35, 85, 140, .9);
+    --pill-hi: rgba(65, 115, 170, .9);
+    --label: rgba(255, 255, 255, .9);
+    --brand: rgba(255, 255, 255, .92);
 }
 
 [data-skin="dark"] {
@@ -2790,4 +2897,30 @@ a.btn.block[hidden],
     .cards:not(.lib-grid) .card.lib .icon-col {
         flex-direction: row;
     }
+}
+
+/* Grip of the editor panels: drag to move the panel, tap to hide / show it */
+.panel-grip {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    place-items: center;
+    height: 30px;
+    margin: 8px -14px 0;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    cursor: grab;
+    touch-action: none;
+}
+
+.panel-grip span {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--muted);
+}
+
+#editor.dragging,
+#screen-editor.dragging {
+    transition: none;
 }
