@@ -1265,7 +1265,14 @@ const App = {
             }
         }
         this.openMenu();
-        if (!this.openSharedLink()) {
+        let audioReload = false;
+        try {
+            audioReload = sessionStorage.getItem('gemuboy:audioReload') === '1';
+            sessionStorage.removeItem('gemuboy:audioReload');
+        } catch (ignored) { }
+        if (audioReload) {
+            this.toast('🔊 Pulsa «Continuar» para seguir jugando con sonido', 4000);
+        } else if (!this.openSharedLink()) {
             this.showWelcome();
         }
     },
@@ -1317,6 +1324,10 @@ const App = {
     // Replaces the AudioContext (iOS sometimes never resumes the old one).
     recreateAudio() {
         const old = Sound.ctx;
+        // Close the old one first: iOS allows only a few AudioContexts at a time.
+        if (old.state !== 'closed') {
+            old.close().catch(() => {});
+        }
         try {
             Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
         } catch (error) {
@@ -1324,9 +1335,6 @@ const App = {
         }
         this.watchAudio();
         this.setupAudioOutput();
-        if (old.state !== 'closed') {
-            old.close().catch(() => {});
-        }
         Sound.ctx.resume().catch(() => {});
         try {
             const source = Sound.ctx.createBufferSource();
@@ -1337,16 +1345,33 @@ const App = {
         this.updateVolume();
     },
 
-    // Forced restart of the sound: a brand-new AudioContext and <audio> elements,
-    // reconnected to the running game. Must run inside a touch (iOS). Used when
-    // the player taps the game screen and after long breaks (audioStale).
-    hardResetAudio({ notify = false } = {}) {
+    // Forced restart of the sound, inside a touch (iOS). When another app with
+    // sound takes the iPhone's audio, the page's audio session stays
+    // "interrupted" and a new AudioContext alone stays silent too. So, in order:
+    // 1) a fresh <audio> element playing a real (silent) file makes iOS
+    //    reactivate the page's media session (the technique of unmute-ios-audio),
+    // 2) the old AudioContext is closed and a new one created and resumed,
+    // 3) the game is reconnected. If iOS still keeps it blocked, the next tap
+    //    reloads the app keeping the game (see checkAudioRecovered).
+    hardResetAudio({ notify = false, manual = false } = {}) {
         const now = performance.now();
-        if (now - (this.lastHardReset || 0) < 1500) {
+        if (now - (this.lastHardReset || 0) < 1200) {
             return;
         }
+        // A second tap on the screen soon after a reset means it is still silent.
+        if (manual && this.audioNeedsReload) {
+            this.reloadForAudio();
+            return;
+        }
+        if (manual && this.lastManualReset && now - this.lastManualReset < 10000) {
+            this.audioNeedsReload = true;
+        }
+        if (manual) {
+            this.lastManualReset = now;
+        }
         this.lastHardReset = now;
-        for (const name of ['mediaEl', 'silentAudio']) {
+        this.audioStale = false;
+        for (const name of ['mediaEl', 'silentAudio', 'channelAudio']) {
             const el = this[name];
             if (el) {
                 try {
@@ -1358,21 +1383,96 @@ const App = {
                 this[name] = null;
             }
         }
-        // Re-announcing the audio session wakes it up on iOS 17+.
-        if (navigator.audioSession) {
-            try {
-                navigator.audioSession.type = 'auto';
-            } catch (ignored) { }
-        }
         this.applyAudioSession();
+        this.playAudioChannel();
         this.recreateAudio();
         if (this.mediaEl) {
             this.mediaEl.play().catch(() => {});
         }
-        this.playSilentLoop();
         if (notify) {
-            this.toast('🔊 Sonido reiniciado');
+            this.toast(this.audioNeedsReload
+                ? '🔊 ¿Sigue sin sonido? Toca la pantalla otra vez para recargar GBoy-JS (la partida se guarda)'
+                : '🔊 Sonido reiniciado', this.audioNeedsReload ? 4000 : 2000);
         }
+        this.checkAudioRecovered();
+    },
+
+    // Silent WAV (0.5 s) used to (re)open the iPhone's media audio channel.
+    silentWavUrl() {
+        if (!this.silentWav) {
+            const rate = 8000;
+            const samples = rate / 2;
+            const bytes = new Uint8Array(44 + samples);
+            const view = new DataView(bytes.buffer);
+            const text = (offset, value) => [...value].forEach((c, i) => { bytes[offset + i] = c.charCodeAt(0); });
+            text(0, 'RIFF');
+            view.setUint32(4, 36 + samples, true);
+            text(8, 'WAVEfmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, rate, true);
+            view.setUint32(28, rate, true);
+            view.setUint16(32, 1, true);
+            view.setUint16(34, 8, true);
+            text(36, 'data');
+            view.setUint32(40, samples, true);
+            bytes.fill(128, 44);
+            this.silentWav = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+        }
+        return this.silentWav;
+    },
+
+    // iOS only: a new looping silent <audio> element, started inside the touch.
+    // Once it plays, the AudioContext is resumed again (now with the session back).
+    playAudioChannel() {
+        if (!this.isIOS) {
+            return;
+        }
+        const audio = document.createElement('audio');
+        audio.src = this.silentWavUrl();
+        audio.loop = true;
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('x-webkit-airplay', 'deny');
+        audio.addEventListener('playing', () => {
+            Sound.ctx.resume().catch(() => {});
+            if (this.mediaEl && this.mediaEl.paused) {
+                this.mediaEl.play().catch(() => {});
+            }
+        }, { once: true });
+        this.channelAudio = audio;
+        audio.play().catch(() => {});
+    },
+
+    // A moment after a reset: if iOS still reports the audio as blocked, the next
+    // tap on the screen reloads the app (what closing and reopening it does).
+    checkAudioRecovered() {
+        clearTimeout(this.audioRecoverCheck);
+        this.audioRecoverCheck = setTimeout(() => {
+            const session = navigator.audioSession && navigator.audioSession.state;
+            if (this.engine && !document.hidden && (Sound.ctx.state !== 'running' || session === 'interrupted')) {
+                this.audioNeedsReload = true;
+                this.toast('⚠️ iOS mantiene el sonido bloqueado. Toca la pantalla del juego para recargar GBoy-JS (la partida se guarda)', 5000);
+            }
+        }, 1500);
+    },
+
+    // Saves everything and reloads the page: a fresh page gets a fresh audio
+    // session. The game reopens where it was (autosave state).
+    reloadForAudio() {
+        this.audioNeedsReload = false;
+        this.toast('🔄 Recargando para recuperar el sonido…', 5000);
+        try {
+            sessionStorage.setItem('gemuboy:audioReload', '1');
+        } catch (ignored) { }
+        this.persistNow();
+        setTimeout(() => location.reload(), 400);
+    },
+
+    audioStatus() {
+        const session = navigator.audioSession ? ' · sesión iOS: ' + navigator.audioSession.state : '';
+        const output = Sound.output ? 'reproductor multimedia' : 'directa';
+        return 'Estado del audio: ' + Sound.ctx.state + session + ' · salida ' + output;
     },
 
     // "media": the sound goes through an <audio> element (a MediaStream), the
@@ -1436,7 +1536,7 @@ const App = {
     // Older iOS without navigator.audioSession: a looping silent <audio> element
     // switches the page to the media audio category, which ignores silent mode.
     playSilentLoop() {
-        if (!this.isIOS || navigator.audioSession || !this.settings.ignoreSilentSwitch || Sound.output) {
+        if (!this.isIOS || navigator.audioSession || !this.settings.ignoreSilentSwitch || Sound.output || this.channelAudio) {
             if (this.silentAudio) {
                 this.silentAudio.pause();
             }
@@ -1881,6 +1981,10 @@ const App = {
     },
 
     renderSettings() {
+        const status = document.getElementById('audio-status');
+        if (status) {
+            status.textContent = this.audioStatus();
+        }
         this.el.menu.querySelectorAll('[data-setting]').forEach((input) => {
             const value = this.settings[input.dataset.setting];
             if (input.type === 'checkbox') {
@@ -2568,7 +2672,7 @@ const App = {
         // Without touch controls covering it, a click on the screen also restarts the sound.
         this.el.screen.addEventListener('click', () => {
             if (this.engine && !this.menuOpen) {
-                this.hardResetAudio({ notify: true });
+                this.hardResetAudio({ notify: true, manual: true });
             }
         });
 
@@ -2579,6 +2683,9 @@ const App = {
                 if (this.mediaEl) {
                     this.mediaEl.pause();
                 }
+                if (this.channelAudio) {
+                    this.channelAudio.pause();
+                }
                 this.persistNow();
                 Controls.releaseAll();
                 Input.releaseAll();
@@ -2588,9 +2695,10 @@ const App = {
                 if (Sound.ctx.state !== 'running' && !this.menuOpen) {
                     Sound.ctx.resume().catch(() => {});
                 }
-                // Away for more than 20 s (another app, locked iPhone): rebuild the
-                // sound on the next touch even if it looks fine.
-                if (this.hiddenAt && Date.now() - this.hiddenAt > 20000) {
+                // Away for more than 2 s (another app, locked iPhone): rebuild the
+                // sound on the next touch even if it looks fine; another app may
+                // have taken the iPhone's audio.
+                if (this.hiddenAt && Date.now() - this.hiddenAt > 2000) {
                     this.audioStale = true;
                 }
                 // Coming back from another app: if iOS kept the audio stopped,
@@ -2732,6 +2840,9 @@ const App = {
                 break;
             case 'theme':
                 this.nextTheme();
+                break;
+            case 'audio-reload':
+                this.reloadForAudio();
                 break;
             case 'clean-autosaves': {
                 const removed = await this.pruneAutosaves(0, { all: true });
