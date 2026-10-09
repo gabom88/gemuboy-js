@@ -235,7 +235,13 @@ const Controls = {
         this.layer.addEventListener('pointercancel', (ev) => this.onUp(ev), { passive: false });
         this.layer.addEventListener('lostpointercapture', (ev) => this.onUp(ev));
         // iOS: block magnifier / callout / double-tap zoom on the control layer.
-        this.layer.addEventListener('touchstart', (ev) => ev.preventDefault(), { passive: false });
+        this.layer.addEventListener('touchstart', (ev) => {
+            // iOS haptics need the tap to become a real click on the control's
+            // label (see setupHaptics), so that touch is not cancelled.
+            if (!(this.hapticsActive && ev.target.closest && ev.target.closest('[data-haptic]'))) {
+                ev.preventDefault();
+            }
+        }, { passive: false });
         this.layer.addEventListener('touchmove', (ev) => ev.preventDefault(), { passive: false });
         this.layer.addEventListener('contextmenu', (ev) => ev.preventDefault());
 
@@ -304,6 +310,7 @@ const Controls = {
         const inset = this.app.safeInsets();
         const layout = this.layout;
         const globalOpacity = this.app.settings.opacity / 100;
+        this.layer.classList.toggle('haptics', this.hapticsActive);
         this.rects = {};
         let dpadTop = null;
         for (const id of Object.keys(this.defs)) {
@@ -446,9 +453,13 @@ const Controls = {
         ev.preventDefault();
         this.app.unlockAudio();
         const { x, y } = this.point(ev);
-        try {
-            this.layer.setPointerCapture(ev.pointerId);
-        } catch (ignored) { }
+        // Touches are already captured by the element they started on; capturing
+        // them on the layer would send the click away from the haptic label.
+        if (!(this.hapticsActive && ev.pointerType === 'touch')) {
+            try {
+                this.layer.setPointerCapture(ev.pointerId);
+            } catch (ignored) { }
+        }
         if (this.editing) {
             this.editDown(ev, x, y);
             return;
@@ -596,38 +607,44 @@ const Controls = {
     },
 
     // --- Haptic feedback ---
+    // Android (Chrome, Edge, Samsung Internet): Vibration API, see haptic().
+    // iOS Safari has no Vibration API, but toggling a native switch
+    // (<input type="checkbox" switch>, Safari 17.4+) plays the system haptic on
+    // iOS 18+. It only works with a real tap, not with a click made by code, so
+    // each control gets a transparent label linked to a hidden switch: the
+    // player's tap on the label toggles the switch and the iPhone vibrates.
+    // Technique from https://github.com/tijnjh/ios-haptics (MIT).
     setupHaptics() {
         this.iosHaptics = !navigator.vibrate && this.app.isIOS;
-    },
-
-    // Android (Chrome, Edge, Samsung Internet): Vibration API. iOS Safari has no
-    // Vibration API; clicking the label of a native switch input makes iOS 18+
-    // play its system "tick". A fresh hidden switch is used each time, as the
-    // known working technique does.
-    haptic() {
-        if (!this.app.settings.vibration) {
-            return;
-        }
-        if (navigator.vibrate) {
-            try {
-                navigator.vibrate(25); // shorter pulses are too weak on many motors
-            } catch (ignored) { }
-            return;
-        }
         if (!this.iosHaptics) {
             return;
         }
-        try {
+        for (const el of Object.values(this.elements)) {
             const label = document.createElement('label');
+            label.dataset.haptic = '';
             label.setAttribute('aria-hidden', 'true');
-            label.style.display = 'none';
             const input = document.createElement('input');
             input.type = 'checkbox';
             input.setAttribute('switch', '');
+            input.tabIndex = -1;
+            // The switch never sits under the finger; its forwarded click stays here.
+            input.addEventListener('click', (ev) => ev.stopPropagation());
             label.appendChild(input);
-            document.head.appendChild(label);
-            label.click();
-            label.remove();
+            el.appendChild(label);
+        }
+    },
+
+    // The iOS labels only catch taps while vibration is on and not editing.
+    get hapticsActive() {
+        return !!(this.iosHaptics && this.app.settings.vibration && !this.editing);
+    },
+
+    haptic() {
+        if (!this.app.settings.vibration || !navigator.vibrate) {
+            return; // iOS: the labels from setupHaptics do it
+        }
+        try {
+            navigator.vibrate(25); // shorter pulses are too weak on many motors
         } catch (ignored) { }
     },
 

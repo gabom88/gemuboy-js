@@ -1367,16 +1367,6 @@ input[type="range"] {
     transform: translate(-50%, 0);
 }
 
-.haptic-switch {
-    position: fixed;
-    left: -100px;
-    top: -100px;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-}
-
 .card.homebrew {
     align-items: flex-start;
 }
@@ -2923,4 +2913,25 @@ a.btn.block[hidden],
 #editor.dragging,
 #screen-editor.dragging {
     transition: none;
+}
+
+/* iOS haptics: transparent label over each control, linked to a hidden switch */
+#controls label[data-haptic] {
+    position: absolute;
+    inset: -15%;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: none;
+}
+
+#controls.haptics label[data-haptic] {
+    pointer-events: auto;
+}
+
+#controls label[data-haptic] input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    visibility: hidden;
 }
