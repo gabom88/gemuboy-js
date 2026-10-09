@@ -9,7 +9,7 @@ const App = {
         audioOutput: 'auto',
         vibration: true,
         touchControls: 'auto',
-        opacity: 100,
+        opacity: 50,
         skin: 'dmg',
         frame: true,
         keyMap: {},
@@ -58,6 +58,16 @@ const App = {
             this.settings.ignoreSilentSwitch = true;
             this.settings.audioVersion = 2;
         }
+        // v2 of the touch controls: new default places for rewind, slow motion,
+        // turbo and menu, and 50 % opacity unless the player had changed it.
+        if ((this.settings.controlsVersion || 1) < 2) {
+            if (this.settings.opacity === 100) {
+                this.settings.opacity = 50;
+            }
+            this.settings.controlsVersion = 2;
+        }
+        // Anonymous statistics are always on (the option was removed).
+        this.settings.analytics = true;
         Analytics.init(this.settings);
         I18n.init(this.settings.lang);
         Engines.sgb = !!this.settings.sgbBorders;
@@ -132,6 +142,15 @@ const App = {
         { id: 'clear-ice', name: 'Transparente · Cristal', color: '#c9d3dc', clear: true },
         { id: 'clear-jungle', name: 'Transparente · Verde jungla', color: '#3f8f57', clear: true },
         { id: 'clear-smoke', name: 'Transparente · Humo', color: '#2b2c33', clear: true },
+        { id: 'pocket-silver', name: 'Pocket · Plata', color: '#c3c6cc' },
+        { id: 'pocket-gold', name: 'Pocket · Dorada', color: '#c9a548' },
+        { id: 'pocket-red', name: 'Pocket · Roja', color: '#c8282e' },
+        { id: 'pocket-pink', name: 'Pocket · Rosa', color: '#f0a0b8' },
+        { id: 'gbc-tangerine', name: 'Color · Mandarina', color: '#f47a1f' },
+        { id: 'gbc-sky', name: 'Color · Celeste', color: '#5bb8e8' },
+        { id: 'famicom', name: 'Edición Famicom', color: '#8c1c22' },
+        { id: 'clear-ruby', name: 'Transparente · Rubí', color: '#b0203c', clear: true },
+        { id: 'clear-ocean', name: 'Transparente · Azul océano', color: '#2a6fb0', clear: true },
         { id: 'dark', name: 'Oscuro', color: '#16171c' },
     ],
 
@@ -379,6 +398,7 @@ const App = {
         Controls.releaseAll();
         Input.releaseAll();
         this.el.screenEditor.hidden = false;
+        this.placePanel(this.el.screenEditor);
         this.el.screenDrag.hidden = false;
         this.el.app.classList.add('screen-editing');
         this.updateScreenEditor();
@@ -1978,9 +1998,67 @@ const App = {
         }
         Controls.startEditing();
         this.el.editor.hidden = false;
+        this.placePanel(this.el.editor);
         this.el.app.classList.add('editing');
         this.renderEditorChips();
         this.updateEditor();
+    },
+
+    // The editor panels can be dragged up and down by their grip so the whole
+    // console stays visible; dragging it up hides it, leaving only the grip.
+    // A tap on the grip hides or shows it.
+    panelOffsets: {},
+
+    placePanel(panel) {
+        const offset = this.panelOffsets[panel.id] || 0;
+        panel.style.setProperty('--panel-y', this.clampPanel(panel, offset) + 'px');
+    },
+
+    clampPanel(panel, offset) {
+        const appH = this.el.app.clientHeight;
+        const h = panel.offsetHeight;
+        const top = panel.offsetTop;
+        const min = -(top + h - 34); // only the grip stays visible
+        const max = Math.max(0, appH - top - h - 8);
+        return Math.min(Math.max(offset, min), max);
+    },
+
+    setupPanelDrag(panel) {
+        const grip = panel.querySelector('.panel-grip');
+        let drag = null;
+        grip.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault();
+            grip.setPointerCapture(ev.pointerId);
+            drag = { y: ev.clientY, start: this.panelOffsets[panel.id] || 0, moved: false };
+            panel.classList.add('dragging');
+        });
+        grip.addEventListener('pointermove', (ev) => {
+            if (!drag) {
+                return;
+            }
+            const dy = ev.clientY - drag.y;
+            if (Math.abs(dy) > 4) {
+                drag.moved = true;
+            }
+            this.panelOffsets[panel.id] = this.clampPanel(panel, drag.start + dy);
+            this.placePanel(panel);
+        });
+        const end = () => {
+            if (!drag) {
+                return;
+            }
+            if (!drag.moved) {
+                const hidden = this.panelOffsets[panel.id] <= this.clampPanel(panel, -1e6) + 2;
+                this.panelOffsets[panel.id] = hidden ? 0 : -1e6;
+            }
+            this.panelOffsets[panel.id] = this.clampPanel(panel, this.panelOffsets[panel.id]);
+            this.placePanel(panel);
+            panel.classList.remove('dragging');
+            drag = null;
+        };
+        grip.addEventListener('pointerup', end);
+        grip.addEventListener('pointercancel', end);
+        grip.addEventListener('touchstart', (ev) => ev.preventDefault(), { passive: false });
     },
 
     stopLayoutEditor() {
@@ -2476,6 +2554,9 @@ const App = {
                 Input.keys[action] = false;
             }
         });
+
+        this.setupPanelDrag(this.el.editor);
+        this.setupPanelDrag(this.el.screenEditor);
 
         // Audio unlock on any gesture (iOS requires touchend / click).
         this.watchAudio();
