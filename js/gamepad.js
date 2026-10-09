@@ -507,7 +507,7 @@ const Controls = {
             this.haptic();
             return;
         }
-        this.pointers.set(ev.pointerId, { control, x, y });
+        this.pointers.set(ev.pointerId, { control, origin: control, x, y });
         this.update();
     },
 
@@ -575,8 +575,15 @@ const Controls = {
                 for (const dir of this.dpadDirections(pointer.x, pointer.y)) {
                     state[dir] = true;
                 }
-            } else if (Input.buttons.includes(pointer.control) && pointer.inside !== false) {
-                state[pointer.control] = true;
+            } else if (Input.buttons.includes(pointer.control)) {
+                if (pointer.inside !== false) {
+                    state[pointer.control] = true;
+                }
+                // Sliding from B to A (or A to B) keeps the first button pressed
+                // too, until the finger is lifted.
+                if (pointer.origin === 'a' || pointer.origin === 'b') {
+                    state[pointer.origin] = true;
+                }
             }
         }
         const newlyPressed = Input.buttons.some((b) => state[b] && !Input.touch[b]);
