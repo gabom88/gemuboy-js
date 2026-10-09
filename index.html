@@ -360,8 +360,11 @@
                         </select></label>
                     <p class="note">Si un juego no suena en tu iPhone, usa «Reproductor multimedia». «Automática» ya lo usa
                         en iPhone y iPad.</p>
-                    <p class="note">🔊 Si el sonido se pierde (por ejemplo, al volver tras bloquear el iPhone), toca la
-                        pantalla del juego: el sonido se reinicia.</p>
+                    <p class="note">🔊 Si el sonido se pierde (por ejemplo, al volver de otra app con sonido), toca la
+                        pantalla del juego: el sonido se reinicia. Si sigue sin sonar, tócala otra vez y GBoy-JS se recarga
+                        conservando la partida.</p>
+                    <button type="button" class="btn block" data-action="audio-reload">Recuperar el sonido (recargar GBoy-JS)</button>
+                    <p class="note" id="audio-status" data-no-i18n></p>
                     <label class="row check" id="row-silent-switch"><span>Sonar con el iPhone en silencio</span>
                         <input type="checkbox" class="toggle" data-setting="ignoreSilentSwitch"></label>
 

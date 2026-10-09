@@ -548,7 +548,7 @@ const Controls = {
         this.pointers.delete(ev.pointerId);
         if (pointer.control === 'screen') {
             if (ev.type === 'pointerup' && this.app.engine) {
-                this.app.hardResetAudio({ notify: true });
+                this.app.hardResetAudio({ notify: true, manual: true });
             }
             return;
         }
