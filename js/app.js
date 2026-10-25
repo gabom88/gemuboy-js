@@ -1656,7 +1656,7 @@ const App = {
         this.renderGameState();
         this.toggleCapturePop(false);
         const render = {
-            main: () => { this.renderMain(); Ads.carousel(document.getElementById('ads-main'), 'general', 'main'); },
+            main: () => { this.renderMain(); Ads.marquee(document.getElementById('ads-main'), 'main'); },
             library: () => Library.render(),
             import: () => this.renderImport(),
             entry: () => Library.renderEntry(),

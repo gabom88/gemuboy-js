@@ -214,9 +214,115 @@ const Ads = {
     stop(container) {
         if (container && container.adsState) {
             clearInterval(container.adsState.timer);
+            cancelAnimationFrame(container.adsState.frame);
             container.adsState.observer.disconnect();
             container.adsState = null;
         }
+    },
+
+    // -------------------------------------------------------------- marquee
+    // Main menu: an endless belt of products from both lists, mixed at random
+    // (least recently seen first), drifting from left to right. It pauses while
+    // touched and for a moment after, so a product can be tapped calmly.
+    speed: 28, // pixels per second
+
+    async marquee(container, where) {
+        if (!container) {
+            return;
+        }
+        this.stop(container);
+        container.hidden = true;
+        container.innerHTML = '';
+        if (!navigator.onLine) {
+            return;
+        }
+        const [general, mandos] = await Promise.all([this.load('general'), this.load('mandos')]);
+        const ads = this.order([...general, ...mandos]).slice(0, 24);
+        if (!ads.length) {
+            return;
+        }
+        container.innerHTML = `
+            <div class="ads-head"><span>Patrocinado · AliExpress</span>
+                <button type="button" class="ads-all" data-action="page" data-page-target="products">Ver productos ›</button></div>
+            <div class="ads-marquee"><div class="ads-belt"></div></div>
+            <p class="ads-note"></p>`;
+        container.querySelector('.ads-note').textContent = this.note;
+        const viewport = container.querySelector('.ads-marquee');
+        const belt = container.querySelector('.ads-belt');
+        container.hidden = false;
+
+        // One "lap" holds every ad, repeated until it is wider than the screen;
+        // the belt holds two laps so the loop has no seam.
+        const cardWidth = (viewport.clientWidth - 20) / 3 + 10;
+        const perLap = Math.max(ads.length, Math.ceil(viewport.clientWidth / cardWidth) + 1);
+        const lap = Array.from({ length: perLap }, (_, i) => ads[i % ads.length]);
+        [...lap, ...lap].forEach((ad, index) => {
+            const card = this.link(ad, where, (index % perLap) + 1);
+            card.className = 'ad';
+            card.style.width = (cardWidth - 10) + 'px'; // three in view
+            card.dataset.ad = String(index % ads.length);
+            const pic = document.createElement('span');
+            pic.className = 'ad-img';
+            if (ad.image) {
+                pic.appendChild(this.picture(ad, 220, index < 4));
+            }
+            card.appendChild(pic);
+            const caption = document.createElement('span');
+            caption.className = 'ad-caption';
+            caption.dataset.noI18n = '';
+            caption.textContent = ad.label || ad.name;
+            caption.hidden = !caption.textContent;
+            card.appendChild(caption);
+            belt.appendChild(card);
+        });
+
+        // Products that come fully into view count as seen (once per showing).
+        const viewed = new Set();
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                const i = Number(entry.target.dataset.ad);
+                if (entry.isIntersecting && !viewed.has(i)) {
+                    viewed.add(i);
+                    this.markSeen(ads[i]);
+                    Analytics.event('ad_view', { ad: ads[i].name || ads[i].url, list: ads[i].list, page: where });
+                }
+            }
+        }, { root: viewport, threshold: 0.9 });
+        [...belt.children].forEach((card) => observer.observe(card));
+
+        const state = { observer, x: null, last: 0, pausedUntil: 0 };
+        container.adsState = state;
+        const pause = (ms) => { state.pausedUntil = Math.max(state.pausedUntil, performance.now() + ms); };
+        viewport.addEventListener('pointerdown', () => pause(1e9), { passive: true });
+        const resume = () => { state.pausedUntil = performance.now() + 2500; };
+        viewport.addEventListener('pointerup', resume, { passive: true });
+        viewport.addEventListener('pointercancel', resume, { passive: true });
+        viewport.addEventListener('pointerleave', resume, { passive: true });
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const step = (now) => {
+            if (container.adsState !== state) {
+                return; // replaced or stopped
+            }
+            state.frame = requestAnimationFrame(step);
+            const half = belt.scrollWidth / 2;
+            if (!half) {
+                return;
+            }
+            if (state.x === null) {
+                state.x = -half; // start one lap to the left, moving right
+            }
+            const dt = Math.min(0.1, (now - (state.last || now)) / 1000);
+            state.last = now;
+            if (!container.offsetParent || document.hidden || now < state.pausedUntil) {
+                return;
+            }
+            state.x += dt * this.speed * (reduced ? 0.4 : 1);
+            if (state.x >= 0) {
+                state.x -= half;
+            }
+            belt.style.transform = `translate3d(${state.x}px, 0, 0)`;
+        };
+        state.frame = requestAnimationFrame(step);
     },
 
     // ------------------------------------------------------------- catalog
