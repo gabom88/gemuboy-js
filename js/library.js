@@ -901,6 +901,7 @@ const Library = {
         const settings = this.app.settings;
         this.renderFilterOptions();
         document.getElementById('lib-search').value = this.view.query;
+        document.getElementById('lib-search-clear').hidden = !this.view.query;
         document.getElementById('lib-sort').value = settings.librarySort;
         const grid = settings.libraryView === 'grid';
         container.className = grid ? 'lib-grid' : 'cards';

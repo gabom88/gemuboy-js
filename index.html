@@ -203,7 +203,10 @@
 
                 <section class="page" data-page="library" data-title="Biblioteca">
                     <div class="lib-toolbar">
-                        <input type="search" id="lib-search" placeholder="Buscar por nombre, género, autor…" autocomplete="off" aria-label="Buscar">
+                        <div class="search-box">
+                            <input type="search" id="lib-search" placeholder="Buscar por nombre, género, autor…" autocomplete="off" aria-label="Buscar">
+                            <button type="button" class="search-clear" id="lib-search-clear" aria-label="Borrar búsqueda" hidden>✕</button>
+                        </div>
                         <div class="lib-row">
                             <select id="lib-filter" aria-label="Filtrar"></select>
                             <select id="lib-sort" aria-label="Ordenar">
