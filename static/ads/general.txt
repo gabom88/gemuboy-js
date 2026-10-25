@@ -7,4 +7,32 @@
 # Opcional: al final de la línea añade " | nombre | etiqueta" para que se vea un texto
 # en el catálogo, por ejemplo:  ...</a> | Consola retro RG35XX | -30 %
 # Las líneas que empiezan por # se ignoran.
-<a href="https://s.click.aliexpress.com/e/_c3lqONg7" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S72e1df19edd2422fa99583c04f62b133o.jpg_80x80.jpg" /></a>
+<a href="https://s.click.aliexpress.com/e/_c3lqONg7" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S72e1df19edd2422fa99583c04f62b133o.jpg_80x80.jpg" /></a> | Anbernic RG DS Plus | -37% dto
+<a href="https://s.click.aliexpress.com/e/_c4qrX2fN" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S705558a3f90c40818810a988a4429dffz.jpg_350x350.jpg" /></a> | Anbernic RGSP Flip | -38% dto
+<a href="https://s.click.aliexpress.com/e/_c4Ei4y6T" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S477ba599df4f45fcac998bf07bfc6295a.jpg_350x350.jpg" /></a> | Anbernic RG DDS G2 Gen2 | -34% dto
+<a href="https://s.click.aliexpress.com/e/_c4Ud7yZZ" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S52d25711cb834ac084dc987b4e61104bs.jpg_350x350.jpg" /></a> | Boyhom R36H PRO |
+<a href="https://s.click.aliexpress.com/e/_c3BPqU7V" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sb0dd19143ec84a5baee7691f1ef0bb60z.jpg_350x350.jpg" /></a> | Trimui Smart Pro S |
+<a href="https://s.click.aliexpress.com/e/_c3pPSlAB" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Se678da72a89041ca9407ef32135d21e1K.jpg_350x350.jpg" /></a> | AYANEO KONKR Pocket Advance | -32% dto
+<a href="https://s.click.aliexpress.com/e/_c4pdcXOf" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S9519dcbb26614fba9e6acfc2de3218d5V.png_350x350.png" /></a> | RG36max 2026 | 
+<a href="https://s.click.aliexpress.com/e/_c3A2Ebqf" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S60d2c9c2f76744c6b1bdaba110b0d397Z.jpg_140x140.jpg" /></a> | Anbernic RG DDS |
+<a href="https://s.click.aliexpress.com/e/_c3EMq8X9" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S80769ab78754490194c0d39e8eae8b86z.jpg_140x140.jpg" /></a> | MIYOO Mini Plus | 
+<a href="https://s.click.aliexpress.com/e/_c3uqiFQP" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S02fba7e6d0b749618e465500b663c8baX.jpg_140x140.jpg" /></a> | Retro ARKOS Linux |
+<a href="https://s.click.aliexpress.com/e/_c4NviwV1" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S2ae645968a3a483a958768e34054f42az.jpg_140x140.jpg" /></a> | Trimui Smart Pro S | 
+<a href="https://s.click.aliexpress.com/e/_c4EUVXBv" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S4b8ca811f17d4ed2b88e173321cad2f5U.jpg_140x140.jpg" /></a> | Trimui CNC de Metal |
+<a href="https://s.click.aliexpress.com/e/_c3KfTjt9" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sb3562e87466d461fb074e24ed05fc0942.jpg_140x140.jpg" /></a> | Trimui brick | 
+<a href="https://s.click.aliexpress.com/e/_c3GPPOIL" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S6d60b2b308f84c8d97f3ca227d3b708a9.jpg_140x140.jpg" /></a> | R36MAX 2 | -29% dto
+<a href="https://s.click.aliexpress.com/e/_c2QDGKCr" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S8e4a2538246f4614ab2e33499a814afa6.png_140x140.png" /></a> | Anbernic RG40XX H | -30% dto
+<a href="https://s.click.aliexpress.com/e/_c3iuX2a3" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sc7fa65ac4a074d1fb093d1b1d7a911b6r.jpg_140x140.jpg" /></a> | Trimui brick pro | -35% dto
+<a href="https://s.click.aliexpress.com/e/_c2ub15gb" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sd2bf5aa7e0b24000957196814cd605a6p.jpg_140x140.jpg" /></a> | Ampown BATLEXP G350 | -49% dto
+<a href="https://s.click.aliexpress.com/e/_c2IvjT8j" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S9ea40bb571ba4a219359375f760e41110.jpg_140x140.jpg" /></a> | Anbernic RG Rotate | -29% dto
+<a href="https://s.click.aliexpress.com/e/_c36Zxa8J" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S4ebc2c5769c64881a8df9a71ed79cc15x.jpg_140x140.jpg" /></a> | MIYOO Mini Flip | 
+<a href="https://s.click.aliexpress.com/e/_c3oW0x2J" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S084485f1345d4953be9aa71a5352876fx.png_140x140.png" /></a> | MIYOO Mini Plus | 
+<a href="https://s.click.aliexpress.com/e/_c352hECn" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S695b446c5f2c45019e93372dbb74ed2fK.jpg_140x140.jpg" /></a> | Boyhom Arkos 2.0 | -25% dto
+<a href="https://s.click.aliexpress.com/e/_c4kXTCKL" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sc0bed4ab4ec740fbaf1bbe0190515c022.png_140x140.png" /></a> | R36 Ultra | 
+<a href="https://s.click.aliexpress.com/e/_c3tjarsj" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S6a648f6bd37445bd9cb5b86a674467c31.jpg_140x140.jpg" /></a> | SF3500 Retro | 
+<a href="https://s.click.aliexpress.com/e/_c4L5mOuJ" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Scf080c4b1bac4de5a8cc5bb57553893fr.jpg_140x140.jpg" /></a> | Anbernic RG40XX H |
+<a href="https://s.click.aliexpress.com/e/_c2uSIblz" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Scebfcaabd8c648d2992620750bdaf4fag.jpg_140x140.jpg" /></a> | Anbernic RG35XX Plus/RG35XX | -66% dto
+<a href="https://s.click.aliexpress.com/e/_c39iQaUf" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S55128213adef4ad682b97e2e67cac43cF.jpg_140x140.jpg" /></a> | Anbernic RG505 | -50% dto
+<a href="https://s.click.aliexpress.com/e/_c4d2vPAX" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S98f0555180c74567b8934f6fff9f07831.jpg_140x140.jpg" /></a> | MIYOO Flip V2 | -37% dto
+<a href="https://s.click.aliexpress.com/e/_c3rWVH87" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sb8a79b40d38148adb88f86443efef32b8.jpg_140x140.jpg" /></a> | Tolex XF35H |
+<a href="https://s.click.aliexpress.com/e/_c3eQYOUf" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/Sb66ac98806f34824bdaa7be57f94aea0U.jpg_140x140.jpg" /></a> | Gamemt E5 | -5% dto
