@@ -1649,14 +1649,14 @@ const App = {
         this.renderGameState();
         this.toggleCapturePop(false);
         const render = {
-            main: () => this.renderMain(),
+            main: () => { this.renderMain(); Ads.render(document.getElementById('ads-main')); },
             library: () => Library.render(),
             import: () => this.renderImport(),
             entry: () => Library.renderEntry(),
             states: () => this.renderStates(),
             palette: () => this.renderPalettes(),
             settings: () => this.renderSettings(),
-            mapping: () => this.renderMapping(),
+            mapping: () => { this.renderMapping(); Ads.render(document.getElementById('ads-mapping'), { category: 'mando' }); },
             skin: () => this.renderSkins(),
             about: () => this.renderAbout(),
             cheats: () => this.renderCheats(),

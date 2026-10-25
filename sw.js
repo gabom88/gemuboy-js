@@ -24,6 +24,7 @@ const ASSETS = [
     'js/engines.js',
     'js/library.js',
     'js/analytics.js',
+    'js/ads.js',
     'js/gif.js',
     'js/i18n-en.js',
     'js/i18n.js',
