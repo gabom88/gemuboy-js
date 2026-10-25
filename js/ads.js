@@ -1,71 +1,145 @@
-// Affiliate ads carousel (AliExpress Portals) shown in the menu, never while
-// playing. The ads come from static/ads.txt, one per line:
-//   name | affiliate link | image | label (optional) | category (optional)
-// Each time a carousel is shown it starts with ads not seen recently, so the
-// player goes through the whole list before any repeats. A category (for
-// example "mando") lets a page show related ads first.
+// AliExpress affiliate ads (Portals). Never shown while playing.
+//
+// Lists (one ad per line, pasted exactly as the AliExpress "Ad center" gives it):
+//   static/ads/general.txt  main menu, game start and the "Productos" catalog
+//   static/ads/mandos.txt   controllers: "Mando y teclado" page and the catalog
+// A line looks like:
+//   <a href="https://s.click.aliexpress.com/e/_xxx" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/xxx.jpg_80x80.jpg" /></a>
+// Optionally followed by " | name | label" (shown under the picture).
+// The HTML is never inserted as is: only the link and the picture are read.
+//
+// "Memory": each ad's last showing is saved, so the least recently seen come
+// first (randomly among equals) and the whole list is seen before repeats.
 const Ads = {
-    file: 'static/ads.txt',
-    rotateMs: 6000,
-    maxSlides: 6,
+    lists: { general: 'static/ads/general.txt', mandos: 'static/ads/mandos.txt' },
+    rotateMs: 5000,
+    // Game start ad: at most once every 3 minutes, never on the game that
+    // reopens when the app starts.
+    interstitialEvery: 3 * 60 * 1000,
+    closeDelay: 3,
+    cache: {},
 
-    async load() {
-        if (!this.loading) {
-            this.loading = fetch(this.file, { cache: 'no-cache' })
+    load(name) {
+        if (!this.cache[name]) {
+            this.cache[name] = fetch(this.lists[name], { cache: 'no-cache' })
                 .then((response) => (response.ok ? response.text() : ''))
-                .then((text) => this.parse(text))
+                .then((text) => this.parse(text, name))
                 .catch(() => []);
+            // Retry next time if it failed (offline at start).
+            this.cache[name].then((list) => { if (!list.length) delete this.cache[name]; });
         }
-        this.list = await this.loading;
-        return this.list;
+        return this.cache[name];
     },
 
-    parse(text) {
+    // Reads the link and the picture of each line. Plain lines
+    // "name | https://link | https://image | label" are accepted too.
+    parse(text, list) {
         const ads = [];
         for (const raw of text.split(/\r?\n/)) {
             const line = raw.trim();
             if (!line || line.startsWith('#')) {
                 continue;
             }
-            const [name, url, image, label, category] = line.split('|').map((cell) => cell.trim());
-            if (!name || !/^https:\/\/\S+$/i.test(url || '')) {
+            let url = '';
+            let image = '';
+            let extra = [];
+            const href = /href\s*=\s*["']([^"']+)["']/i.exec(line);
+            if (href) {
+                url = href[1];
+                const src = /<img[^>]*\ssrc\s*=\s*["']([^"']+)["']/i.exec(line);
+                image = src ? src[1] : '';
+                const after = line.replace(/^[\s\S]*<\/a>/i, '');
+                extra = after.split('|').map((cell) => cell.trim()).filter(Boolean);
+            } else {
+                const cells = line.split('|').map((cell) => cell.trim());
+                const at = cells.findIndex((cell) => /^https:\/\//i.test(cell));
+                if (at < 0) {
+                    continue;
+                }
+                url = cells[at];
+                image = cells[at + 1] || '';
+                extra = [cells.slice(0, at).join(' '), cells[at + 2] || ''].filter(Boolean);
+            }
+            if (image.startsWith('//')) {
+                image = 'https:' + image;
+            }
+            if (!/^https:\/\/[^\s"'<>]+$/i.test(url)) {
                 continue;
             }
             ads.push({
-                name: name.slice(0, 80),
                 url,
-                image: /^https:\/\/\S+$/i.test(image || '') ? image : '',
-                label: (label || '').slice(0, 40),
-                category: (category || '').toLowerCase(),
+                image: /^https:\/\/[^\s"'<>]+$/i.test(image) ? image : '',
+                name: (extra[0] || '').slice(0, 80),
+                label: (extra[1] || '').slice(0, 40),
+                list,
             });
         }
         return ads;
     },
 
-    // Least recently shown first (random among equals), related category first.
-    pick(category) {
-        let seen = {};
+    // AliExpress pictures come as "…jpg_80x80.jpg": ask for a bigger size for
+    // sharp images, falling back to the original if that size doesn't exist.
+    imageUrl(ad, size) {
+        return ad.image.replace(/_\d+x\d+\.(jpe?g|png|webp)$/i, `_${size}x${size}.$1`);
+    },
+
+    picture(ad, size, eager) {
+        const img = document.createElement('img');
+        img.alt = ad.name || 'Producto de AliExpress';
+        img.loading = eager ? 'eager' : 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => {
+            if (img.src !== ad.image) {
+                img.src = ad.image;
+            } else {
+                img.remove();
+            }
+        };
+        img.src = this.imageUrl(ad, size);
+        return img;
+    },
+
+    seen() {
         try {
-            seen = JSON.parse(localStorage.getItem('gemuboy:adsSeen') || '{}');
-        } catch (ignored) { }
-        const score = (ad) => (seen[ad.url] || 0) + Math.random();
-        const ordered = [...this.list].sort((a, b) => score(a) - score(b));
-        if (category) {
-            ordered.sort((a, b) => (b.category === category) - (a.category === category));
+            return JSON.parse(localStorage.getItem('gemuboy:adsSeen') || '{}');
+        } catch (error) {
+            return {};
         }
-        return ordered.slice(0, this.maxSlides);
     },
 
     markSeen(ad) {
         try {
-            const seen = JSON.parse(localStorage.getItem('gemuboy:adsSeen') || '{}');
+            const seen = this.seen();
             seen[ad.url] = Date.now();
             localStorage.setItem('gemuboy:adsSeen', JSON.stringify(seen));
         } catch (ignored) { }
     },
 
-    // Fills a container (an element with class "ads") with a carousel.
-    async render(container, { category = '' } = {}) {
+    // Least recently shown first, random among equals (never seen = 0).
+    order(ads) {
+        const seen = this.seen();
+        return ads
+            .map((ad) => ({ ad, key: (seen[ad.url] || 0) + Math.random() * 1000 }))
+            .sort((a, b) => a.key - b.key)
+            .map((item) => item.ad);
+    },
+
+    link(ad, where, position) {
+        const a = document.createElement('a');
+        a.href = ad.url;
+        a.target = '_blank';
+        a.rel = 'sponsored noopener noreferrer';
+        a.addEventListener('click', () => {
+            Analytics.event('ad_click', { ad: ad.name || ad.url, list: ad.list, page: where, position });
+        });
+        return a;
+    },
+
+    note: 'Enlaces de afiliado: si compras, GBoy-JS recibe una pequeña comisión sin costo extra para ti.',
+
+    // ------------------------------------------------------------ carousel
+    // A strip of square products that scrolls by itself (menu and controllers page).
+    async carousel(container, list, where) {
         if (!container) {
             return;
         }
@@ -75,86 +149,203 @@ const Ads = {
         if (!navigator.onLine) {
             return;
         }
-        await this.load();
-        if (!this.list.length) {
+        const ads = this.order(await this.load(list)).slice(0, 12);
+        if (!ads.length) {
             return;
         }
-        const slides = this.pick(category);
         container.innerHTML = `
-            <div class="ads-head"><span>Patrocinado · AliExpress</span><span class="ads-dots"></span></div>
+            <div class="ads-head"><span>Patrocinado · AliExpress</span>
+                <button type="button" class="ads-all" data-action="page" data-page-target="products">Ver productos ›</button></div>
             <div class="ads-track"></div>
-            <p class="ads-note">Enlace de afiliado: si compras, GBoy-JS recibe una pequeña comisión sin costo extra para ti.</p>`;
+            <p class="ads-note"></p>`;
+        container.querySelector('.ads-note').textContent = this.note;
         const track = container.querySelector('.ads-track');
-        const dots = container.querySelector('.ads-dots');
-        slides.forEach((ad, index) => {
-            const link = document.createElement('a');
-            link.className = 'ad';
-            link.href = ad.url;
-            link.target = '_blank';
-            link.rel = 'sponsored noopener noreferrer';
-            link.innerHTML = `
-                <span class="ad-img"></span>
-                <span class="ad-text"><strong data-no-i18n></strong><small data-no-i18n></small><em>Ver en AliExpress ›</em></span>`;
-            link.querySelector('strong').textContent = ad.name;
-            const small = link.querySelector('small');
-            small.textContent = ad.label;
-            small.hidden = !ad.label;
+        ads.forEach((ad, index) => {
+            const card = this.link(ad, where, index + 1);
+            card.className = 'ad';
+            const pic = document.createElement('span');
+            pic.className = 'ad-img';
             if (ad.image) {
-                const img = document.createElement('img');
-                img.alt = '';
-                img.loading = index ? 'lazy' : 'eager';
-                img.referrerPolicy = 'no-referrer';
-                img.onerror = () => img.remove();
-                img.src = ad.image;
-                link.querySelector('.ad-img').appendChild(img);
+                pic.appendChild(this.picture(ad, 220, index < 3));
             }
-            link.addEventListener('click', () => {
-                Analytics.event('ad_click', { ad: ad.name, category: ad.category, position: index + 1, page: category || 'main' });
-            });
-            track.appendChild(link);
-            const dot = document.createElement('i');
-            dots.appendChild(dot);
+            card.appendChild(pic);
+            const caption = document.createElement('span');
+            caption.className = 'ad-caption';
+            caption.dataset.noI18n = '';
+            caption.textContent = ad.label || ad.name;
+            caption.hidden = !caption.textContent;
+            card.appendChild(caption);
+            track.appendChild(card);
         });
-        dots.hidden = slides.length < 2;
         container.hidden = false;
 
-        // Current slide follows the scroll (swipe) and counts as seen.
-        const state = { index: -1, slides, track, dots, category };
-        container.adsState = state;
-        const show = (index) => {
-            if (index === state.index) {
-                return;
+        // Ads that come into view count as seen.
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                    const ad = ads[[...track.children].indexOf(entry.target)];
+                    if (ad && !entry.target.dataset.viewed) {
+                        entry.target.dataset.viewed = '1';
+                        this.markSeen(ad);
+                        Analytics.event('ad_view', { ad: ad.name || ad.url, list: ad.list, page: where });
+                    }
+                }
             }
-            state.index = index;
-            [...dots.children].forEach((dot, i) => dot.classList.toggle('on', i === index));
-            this.markSeen(slides[index]);
-            Analytics.event('ad_view', { ad: slides[index].name, page: category || 'main' });
-        };
-        track.addEventListener('scroll', () => {
-            show(Math.round(track.scrollLeft / Math.max(1, track.clientWidth)));
-        }, { passive: true });
-        show(0);
+        }, { root: track, threshold: 0.6 });
+        [...track.children].forEach((card) => observer.observe(card));
 
-        // Auto-advance, paused while the player touches the carousel.
+        // Auto-scroll one card at a time, paused while touched.
+        const state = { observer };
+        container.adsState = state;
         const pause = () => { state.pausedUntil = Date.now() + this.rotateMs * 2; };
         track.addEventListener('pointerdown', pause, { passive: true });
         track.addEventListener('touchstart', pause, { passive: true });
-        if (slides.length > 1) {
-            state.timer = setInterval(() => {
-                // Not on screen (menu closed or another page): wait.
-                if (!container.offsetParent || document.hidden || Date.now() < (state.pausedUntil || 0)) {
-                    return;
-                }
-                const next = (state.index + 1) % slides.length;
-                track.scrollTo({ left: next * track.clientWidth, behavior: 'smooth' });
-            }, this.rotateMs);
-        }
+        state.timer = setInterval(() => {
+            if (!container.offsetParent || document.hidden || Date.now() < (state.pausedUntil || 0)) {
+                return;
+            }
+            const card = track.firstElementChild;
+            const step = card ? card.offsetWidth + 10 : track.clientWidth;
+            const end = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+            track.scrollTo({ left: end ? 0 : track.scrollLeft + step, behavior: 'smooth' });
+        }, this.rotateMs);
     },
 
     stop(container) {
         if (container && container.adsState) {
             clearInterval(container.adsState.timer);
+            container.adsState.observer.disconnect();
             container.adsState = null;
         }
+    },
+
+    // ------------------------------------------------------------- catalog
+    async catalog(container) {
+        container.innerHTML = '<p class="note">Cargando productos…</p>';
+        const [mandos, general] = await Promise.all([this.load('mandos'), this.load('general')]);
+        container.innerHTML = '';
+        if (!mandos.length && !general.length) {
+            container.innerHTML = `<p class="empty">${navigator.onLine ? 'Todavía no hay productos.' : 'Conéctate a internet para ver los productos.'}</p>`;
+            return;
+        }
+        const section = (title, ads, where) => {
+            if (!ads.length) {
+                return;
+            }
+            const h = document.createElement('h2');
+            h.textContent = title;
+            container.appendChild(h);
+            const grid = document.createElement('div');
+            grid.className = 'products';
+            this.order(ads).forEach((ad, index) => {
+                const card = this.link(ad, where, index + 1);
+                card.className = 'product';
+                const pic = document.createElement('span');
+                pic.className = 'ad-img';
+                if (ad.image) {
+                    pic.appendChild(this.picture(ad, 350, index < 6));
+                }
+                card.appendChild(pic);
+                const text = document.createElement('span');
+                text.className = 'product-text';
+                if (ad.name) {
+                    const name = document.createElement('strong');
+                    name.dataset.noI18n = '';
+                    name.textContent = ad.name;
+                    text.appendChild(name);
+                }
+                if (ad.label) {
+                    const label = document.createElement('small');
+                    label.dataset.noI18n = '';
+                    label.textContent = ad.label;
+                    text.appendChild(label);
+                }
+                const cta = document.createElement('em');
+                cta.textContent = 'Ver en AliExpress ›';
+                text.appendChild(cta);
+                card.appendChild(text);
+                grid.appendChild(card);
+            });
+            container.appendChild(grid);
+        };
+        section('Mandos Bluetooth', mandos, 'products-mandos');
+        section('Más productos', general, 'products');
+        const note = document.createElement('p');
+        note.className = 'ads-note';
+        note.textContent = this.note;
+        container.appendChild(note);
+        Analytics.event('products_open', { count: mandos.length + general.length });
+    },
+
+    // ---------------------------------------------------- game start ad
+    // Pauses the game behind a dialog with one product; the ✕ appears after
+    // 3 seconds and closing it resumes the game.
+    async interstitial(app) {
+        if (!navigator.onLine || Date.now() - (this.lastInterstitial || 0) < this.interstitialEvery) {
+            return;
+        }
+        const ads = this.order(await this.load('general'));
+        const ad = ads[0];
+        if (!ad || !app.engine) {
+            return;
+        }
+        this.lastInterstitial = Date.now();
+        this.markSeen(ad);
+        const dialog = document.getElementById('ad-dialog');
+        const slot = dialog.querySelector('.ad-slot');
+        slot.innerHTML = '';
+        const card = this.link(ad, 'game-start', 1);
+        card.className = 'ad-big';
+        const pic = document.createElement('span');
+        pic.className = 'ad-img';
+        if (ad.image) {
+            pic.appendChild(this.picture(ad, 350, true));
+        }
+        card.appendChild(pic);
+        const text = document.createElement('span');
+        text.className = 'product-text';
+        if (ad.name || ad.label) {
+            const name = document.createElement('strong');
+            name.dataset.noI18n = '';
+            name.textContent = [ad.name, ad.label].filter(Boolean).join(' · ');
+            text.appendChild(name);
+        }
+        const cta = document.createElement('em');
+        cta.textContent = 'Ver en AliExpress ›';
+        text.appendChild(cta);
+        card.appendChild(text);
+        slot.appendChild(card);
+
+        const close = dialog.querySelector('.ad-close');
+        let left = this.closeDelay;
+        close.disabled = true;
+        close.textContent = String(left);
+        clearInterval(this.countdown);
+        this.countdown = setInterval(() => {
+            left--;
+            if (left > 0) {
+                close.textContent = String(left);
+            } else {
+                clearInterval(this.countdown);
+                close.disabled = false;
+                close.textContent = '✕';
+            }
+        }, 1000);
+        app.adShowing = true;
+        Controls.releaseAll();
+        Input.releaseAll();
+        dialog.hidden = false;
+        Analytics.event('ad_view', { ad: ad.name || ad.url, list: ad.list, page: 'game-start' });
+    },
+
+    closeInterstitial(app) {
+        const dialog = document.getElementById('ad-dialog');
+        if (dialog.hidden || dialog.querySelector('.ad-close').disabled) {
+            return;
+        }
+        dialog.hidden = true;
+        app.adShowing = false;
+        app.lastTime = performance.now();
+        app.unlockAudio(true);
     },
 };

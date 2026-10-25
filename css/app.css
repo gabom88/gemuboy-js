@@ -2936,9 +2936,9 @@ a.btn.block[hidden],
     visibility: hidden;
 }
 
-/* Affiliate ads carousel (menu only) */
+/* AliExpress ads: carousel (menu, controllers page), catalog and game start */
 .ads {
-    margin: 16px 0 4px;
+    margin: 18px 0 6px;
 }
 
 .ads[hidden] {
@@ -2957,35 +2957,25 @@ a.btn.block[hidden],
     text-transform: uppercase;
 }
 
-.ads-dots {
-    display: flex;
-    gap: 5px;
-}
-
-.ads-dots[hidden] {
-    display: none;
-}
-
-.ads-dots i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--line);
-    transition: background .2s, transform .2s;
-}
-
-.ads-dots i.on {
-    background: var(--accent);
-    transform: scale(1.25);
+.ads-all {
+    border: 0;
+    background: none;
+    color: var(--accent-2);
+    font: inherit;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 0;
 }
 
 .ads-track {
     display: flex;
+    gap: 10px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     touch-action: pan-x pan-y;
-    border-radius: 16px;
 }
 
 .ads-track::-webkit-scrollbar {
@@ -2993,27 +2983,23 @@ a.btn.block[hidden],
 }
 
 .ad {
-    flex: 0 0 100%;
+    flex: 0 0 calc((100% - 20px) / 3);
     scroll-snap-align: start;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 92px;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    background: var(--panel-2);
-    color: var(--text);
+    flex-direction: column;
+    gap: 4px;
     text-decoration: none;
+    color: var(--text);
 }
 
 .ad-img {
-    flex: none;
-    width: 72px;
-    height: 72px;
-    border-radius: 10px;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
     overflow: hidden;
-    background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e62e04' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M6 8h12l-1 12H7z'/><path d='M9 8a3 3 0 0 1 6 0'/></svg>") center / 40% no-repeat;
+    border: 1px solid var(--line);
+    background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e62e04' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M5 8h14l-1.2 12H6.2z'/><path d='M9 8a3 3 0 0 1 6 0'/></svg>") center / 36% no-repeat;
 }
 
 .ad-img img {
@@ -3021,17 +3007,57 @@ a.btn.block[hidden],
     height: 100%;
     object-fit: cover;
     display: block;
+    background: #fff;
 }
 
-.ad-text {
+.ad-caption {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e62e04;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ad-caption[hidden] {
+    display: none;
+}
+
+.ads-note {
+    margin: 6px 2px 0;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* Catalog */
+.products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.product,
+.ad-big {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    min-width: 0;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    text-decoration: none;
 }
 
-.ad-text strong {
-    font-size: 15px;
+.product-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 2px 2px;
+}
+
+.product-text strong {
+    font-size: 14px;
     line-height: 1.25;
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -3039,25 +3065,59 @@ a.btn.block[hidden],
     overflow: hidden;
 }
 
-.ad-text small {
+.product-text small {
     color: #e62e04;
     font-weight: 700;
     font-size: 13px;
 }
 
-.ad-text small[hidden] {
-    display: none;
-}
-
-.ad-text em {
+.product-text em {
     font-style: normal;
     color: var(--accent-2);
     font-size: 13px;
     font-weight: 600;
 }
 
-.ads-note {
-    margin: 6px 2px 0;
+/* Game start ad */
+#ad-dialog {
+    z-index: 40;
+}
+
+.ad-box {
+    width: min(340px, 100%);
+    padding: 14px;
+    text-align: left;
+}
+
+.ad-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ad-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ad-close:disabled {
     color: var(--muted);
+    cursor: default;
+}
+
+.ad-big .ad-img {
+    border-radius: 12px;
+}
+
+.ad-box .ads-note {
+    margin: 8px 0 0;
     font-size: 11px;
 }

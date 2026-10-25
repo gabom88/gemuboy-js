@@ -1,0 +1,3 @@
+# Anuncios de mandos Bluetooth (AliExpress Portals): sección «Mando y teclado» y
+# catálogo «Productos». Mismo formato que general.txt: un anuncio por línea,
+# pegado tal como lo da el Centro de anuncios, con " | nombre | etiqueta" opcional.
