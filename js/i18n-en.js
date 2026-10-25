@@ -447,7 +447,7 @@ const I18nEnglish = {
         'No se encontró el ROM guardado en el dispositivo': 'The saved ROM was not found on the device',
         '🔇 Toca la pantalla del juego para reactivar el sonido': '🔇 Tap the game screen to turn the sound back on',
         '🔊 Sonido reiniciado': '🔊 Sound restarted',
-        'Patrocinado · AliExpress': 'Sponsored · AliExpress',
+        '🔥 Ofertas para gamers': '🔥 Deals for gamers',
         'Ver en AliExpress ›': 'View on AliExpress ›',
         'Enlaces de afiliado: si compras, GBoy-JS recibe una pequeña comisión sin costo extra para ti.': 'Affiliate links: if you buy, GBoy-JS gets a small commission at no extra cost to you.',
         'Ver productos ›': 'See products ›',

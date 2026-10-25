@@ -141,6 +141,7 @@
 
                 <section class="page" data-page="main">
                     <div id="now-playing"></div>
+                    <div class="ads ads-top" id="ads-main" hidden></div>
                     <div class="tiles">
                         <button type="button" class="tile primary" data-action="resume" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span>Continuar</span></button>
                         <button type="button" class="tile" data-action="reset" data-needs-game><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Reiniciar</span></button>
@@ -155,7 +156,6 @@
                     </div>
                     <div class="coffee"><a class="bmc" href="https://www.buymeacoffee.com/bardock" target="_blank" rel="noopener" data-track="coffee"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee"></a>
                         <a class="tg" href="https://t.me/BardockPlay" target="_blank" rel="noopener" data-track="telegram" aria-label="Canal de Telegram BardockPlay"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="tg-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2aabee"/><stop offset="1" stop-color="#229ed9"/></linearGradient></defs><circle cx="12" cy="12" r="12" fill="url(#tg-grad)"/><path fill="#fff" d="M5.4 11.8l11.3-4.4c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-2.9 5.3-4.8c.2-.2 0-.3-.3-.1l-6.6 4.1-2.8-.9c-.6-.2-.6-.6.1-.9z"/></svg></a></div>
-                    <div class="ads" id="ads-main" hidden></div>
                     <p class="credit">Desarrollado por BardockPlay</p>
                 </section>
 
@@ -530,7 +530,7 @@
         <!-- Game start ad -->
         <div id="ad-dialog" class="dialog" hidden>
             <div class="welcome-box ad-box" role="dialog" aria-modal="true" aria-label="Anuncio">
-                <div class="ad-top"><small class="now-label">Patrocinado · AliExpress</small>
+                <div class="ad-top"><small class="now-label">🔥 Ofertas para gamers</small>
                     <button type="button" class="ad-close" data-action="ad-close" aria-label="Cerrar anuncio" disabled>3</button></div>
                 <div class="ad-slot"></div>
                 <p class="ads-note">Enlaces de afiliado: si compras, GBoy-JS recibe una pequeña comisión sin costo extra para ti.</p>
