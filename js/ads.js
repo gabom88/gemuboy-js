@@ -298,37 +298,109 @@ const Ads = {
         }, { root: viewport, threshold: 0.9 });
         [...belt.children].forEach((card) => observer.observe(card));
 
-        const state = { observer, x: null, last: 0, pausedUntil: 0 };
+        const state = { observer, x: null, last: 0, pausedUntil: 0, velocity: 0, drag: null };
         container.adsState = state;
-        const pause = (ms) => { state.pausedUntil = Math.max(state.pausedUntil, performance.now() + ms); };
-        viewport.addEventListener('pointerdown', () => pause(1e9), { passive: true });
-        const resume = () => { state.pausedUntil = performance.now() + 2500; };
-        viewport.addEventListener('pointerup', resume, { passive: true });
-        viewport.addEventListener('pointercancel', resume, { passive: true });
-        viewport.addEventListener('pointerleave', resume, { passive: true });
+        const half = () => belt.scrollWidth / 2;
+        // Keeps the belt position inside one lap, so it loops in both directions.
+        const wrap = () => {
+            const h = half();
+            if (h) {
+                while (state.x >= 0) state.x -= h;
+                while (state.x < -h) state.x += h;
+            }
+        };
+        const draw = () => { belt.style.transform = `translate3d(${state.x}px, 0, 0)`; };
+
+        // Swipe: the belt follows the finger (or mouse) sideways, and keeps some
+        // momentum after letting go. Vertical swipes still scroll the menu.
+        viewport.addEventListener('pointerdown', (ev) => {
+            state.drag = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, start: state.x, moved: false, lastX: ev.clientX, lastT: performance.now() };
+            state.velocity = 0;
+            state.pausedUntil = Infinity;
+        });
+        viewport.addEventListener('pointermove', (ev) => {
+            const drag = state.drag;
+            if (!drag || ev.pointerId !== drag.id || state.x === null) {
+                return;
+            }
+            const dx = ev.clientX - drag.x;
+            if (!drag.moved) {
+                if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(ev.clientY - drag.y)) {
+                    return;
+                }
+                drag.moved = true;
+                try {
+                    viewport.setPointerCapture(ev.pointerId);
+                } catch (ignored) { }
+            }
+            const now = performance.now();
+            const dt = Math.max(1, now - drag.lastT);
+            state.velocity = ((ev.clientX - drag.lastX) / dt) * 1000; // px/s
+            drag.lastX = ev.clientX;
+            drag.lastT = now;
+            state.x = drag.start + dx;
+            wrap();
+            drag.start = state.x - dx;
+            draw();
+        });
+        const release = (ev) => {
+            const drag = state.drag;
+            if (!drag || ev.pointerId !== drag.id) {
+                return;
+            }
+            state.drag = null;
+            // A swipe must not open the product under the finger.
+            if (drag.moved) {
+                state.blockClickUntil = performance.now() + 400;
+            } else {
+                state.velocity = 0;
+            }
+            if (performance.now() - drag.lastT > 120) {
+                state.velocity = 0; // finger stopped before lifting
+            }
+            state.pausedUntil = performance.now() + 2500;
+        };
+        viewport.addEventListener('pointerup', release);
+        viewport.addEventListener('pointercancel', release);
+        viewport.addEventListener('click', (ev) => {
+            if (performance.now() < (state.blockClickUntil || 0)) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
+        }, { capture: true });
+        viewport.addEventListener('dragstart', (ev) => ev.preventDefault());
+
         const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
         const step = (now) => {
             if (container.adsState !== state) {
                 return; // replaced or stopped
             }
             state.frame = requestAnimationFrame(step);
-            const half = belt.scrollWidth / 2;
-            if (!half) {
+            if (!half()) {
                 return;
             }
             if (state.x === null) {
-                state.x = -half; // start one lap to the left, moving right
+                state.x = -half(); // start one lap to the left, moving right
             }
             const dt = Math.min(0.1, (now - (state.last || now)) / 1000);
             state.last = now;
+            if (state.drag) {
+                return;
+            }
+            // Momentum after a swipe, slowing down.
+            if (Math.abs(state.velocity) > 5) {
+                state.x += state.velocity * dt;
+                state.velocity *= Math.pow(0.04, dt);
+                wrap();
+                draw();
+                return;
+            }
             if (!container.offsetParent || document.hidden || now < state.pausedUntil) {
                 return;
             }
             state.x += dt * this.speed * (reduced ? 0.4 : 1);
-            if (state.x >= 0) {
-                state.x -= half;
-            }
-            belt.style.transform = `translate3d(${state.x}px, 0, 0)`;
+            wrap();
+            draw();
         };
         state.frame = requestAnimationFrame(step);
     },
