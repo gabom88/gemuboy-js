@@ -320,6 +320,7 @@ body {
 .ctrl-turbo .face,
 .ctrl-rewind .face,
 .ctrl-slow .face,
+.ctrl-palette .face,
 .ctrl-menu .face {
     position: absolute;
     inset: 0;
@@ -415,6 +416,7 @@ body {
 .ctrl-turbo .face,
 .ctrl-rewind .face,
 .ctrl-slow .face,
+.ctrl-palette .face,
 .ctrl-menu .face {
     background: linear-gradient(180deg, var(--pill-hi) 0%, var(--pill) 55%, var(--pill-lo) 100%);
     box-shadow:
@@ -436,9 +438,14 @@ body {
     font-size: .8em;
 }
 
+.ctrl-palette span {
+    font-size: .95em;
+}
+
 .ctrl-turbo.pressed .face,
 .ctrl-rewind.pressed .face,
 .ctrl-slow.pressed .face,
+.ctrl-palette.pressed .face,
 .ctrl-menu.pressed .face {
     transform: translateY(2px);
     filter: brightness(.88);
@@ -456,6 +463,7 @@ body {
 #controls.editing .ctrl-turbo,
 #controls.editing .ctrl-rewind,
 #controls.editing .ctrl-slow,
+#controls.editing .ctrl-palette,
 #controls.editing .ctrl-menu {
     border-radius: 50%;
 }

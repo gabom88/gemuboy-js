@@ -216,6 +216,48 @@ const App = {
         this.layout();
     },
 
+    // Palettes are remembered per game (by ROM id): choosing one while a game
+    // runs saves it for that game, and opening the game brings it back. Games
+    // never played with a choice of their own keep the current palette.
+    choosePalette(id) {
+        this.settings.palette = id;
+        this.saveSettings();
+        if (this.game) {
+            Store.setSync('palette:' + this.game.id, id);
+        }
+        this.applyPalette();
+        this.redraw();
+        if (this.menuOpen && this.page === 'palette') {
+            this.renderPalettes();
+        }
+    },
+
+    restoreGamePalette(info) {
+        const saved = Store.getSync('palette:' + info.id);
+        if (saved && (saved === 'custom' || Palettes.presets.some((preset) => preset.id === saved))) {
+            this.settings.palette = saved;
+            this.saveSettings();
+        } else {
+            Store.setSync('palette:' + info.id, this.settings.palette);
+        }
+    },
+
+    // Touch button / P key: next palette; holding the button: previous one.
+    cyclePalette(step) {
+        if (!this.engine) {
+            return;
+        }
+        if (this.engine.cgb || this.engine.isSgb) {
+            this.toast(this.engine.isSgb ? 'Este juego usa los colores de Super Game Boy' : 'Los juegos de Game Boy Color usan sus propios colores', 2000);
+            return;
+        }
+        const presets = Palettes.presets;
+        const index = presets.findIndex((preset) => preset.id === this.settings.palette);
+        const next = index < 0 ? (step > 0 ? 0 : presets.length - 1) : (index + step + presets.length) % presets.length;
+        this.choosePalette(presets[next].id);
+        this.toast('🎨 ' + presets[next].name, 1200);
+    },
+
     applyPalette() {
         Palettes.apply(this.settings);
         if (this.engine) {
@@ -628,6 +670,8 @@ const App = {
                 this.loadState('1');
             } else if (!this.menuOpen && this.engine && action === 'slow') {
                 this.toggleSlowMotion();
+            } else if (!this.menuOpen && this.engine && action === 'palette') {
+                this.cyclePalette(1);
             } else if (source === 'pad' && this.menuOpen && action === 'start' && this.engine && this.page === 'main') {
                 this.closeMenu();
             }
@@ -1071,6 +1115,7 @@ const App = {
         this.setScreenSize(engine.width || 160, engine.height || 144);
         this.applyCheats(true);
         await this.loadSram(engine, info);
+        this.restoreGamePalette(info);
         engine.setPalette(this.settings);
         this.updateVolume();
         this.running = true;
@@ -2594,10 +2639,7 @@ const App = {
         document.querySelectorAll('[data-custom]').forEach((input) => {
             input.addEventListener('input', () => {
                 this.settings.customPalette[Number(input.dataset.custom)] = input.value;
-                this.settings.palette = 'custom';
-                this.saveSettings();
-                this.applyPalette();
-                this.redraw();
+                this.choosePalette('custom');
             });
             input.addEventListener('change', () => this.renderPalettes());
         });
@@ -3220,17 +3262,11 @@ const App = {
                 this.renderStates();
                 break;
             case 'palette':
-                this.settings.palette = target.dataset.id;
-                this.saveSettings();
-                this.applyPalette();
-                this.redraw();
+                this.choosePalette(target.dataset.id);
                 this.renderPalettes();
                 break;
             case 'palette-custom':
-                this.settings.palette = 'custom';
-                this.saveSettings();
-                this.applyPalette();
-                this.redraw();
+                this.choosePalette('custom');
                 this.renderPalettes();
                 break;
             case 'edit-layout':
