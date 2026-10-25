@@ -1,0 +1,10 @@
+# Anuncios generales de GBoy-JS (AliExpress Portals): menú principal, anuncio al
+# empezar un juego y catálogo «Productos».
+#
+# Pega cada anuncio en una línea, tal como lo da el Centro de anuncios, por ejemplo:
+# <a href="https://s.click.aliexpress.com/e/_XXXX" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/XXXX.jpg_80x80.jpg" /></a>
+#
+# Opcional: al final de la línea añade " | nombre | etiqueta" para que se vea un texto
+# en el catálogo, por ejemplo:  ...</a> | Consola retro RG35XX | -30 %
+# Las líneas que empiezan por # se ignoran.
+<a href="https://s.click.aliexpress.com/e/_c3lqONg7" target="_blank"><img src="//ae-pic-a1.aliexpress-media.com/kf/S72e1df19edd2422fa99583c04f62b133o.jpg_80x80.jpg" /></a>

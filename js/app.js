@@ -738,7 +738,7 @@ const App = {
     },
 
     isPaused() {
-        return this.menuOpen || Controls.editing || this.screenEditing || document.hidden;
+        return this.menuOpen || Controls.editing || this.screenEditing || document.hidden || !!this.adShowing;
     },
 
     countFps(frames, now) {
@@ -1085,6 +1085,11 @@ const App = {
         if (state) {
             await this.loadState(state, { quiet: true });
         }
+        // Game start ad (not for the game that reopens with the app, nor on an
+        // engine switch); the game waits paused behind it.
+        if (this.booted && source !== 'restart') {
+            Ads.interstitial(this);
+        }
         this.redraw();
         this.requestWakeLock();
 
@@ -1264,6 +1269,7 @@ const App = {
                 console.error(error);
             }
         }
+        this.booted = true;
         this.openMenu();
         let audioReload = false;
         try {
@@ -1629,6 +1635,7 @@ const App = {
         skin: 'interface',
         mapping: 'controls',
         cheats: 'main',
+        products: 'main',
     },
 
     showPage(page) {
@@ -1649,14 +1656,15 @@ const App = {
         this.renderGameState();
         this.toggleCapturePop(false);
         const render = {
-            main: () => this.renderMain(),
+            main: () => { this.renderMain(); Ads.carousel(document.getElementById('ads-main'), 'general', 'main'); },
             library: () => Library.render(),
             import: () => this.renderImport(),
             entry: () => Library.renderEntry(),
             states: () => this.renderStates(),
             palette: () => this.renderPalettes(),
             settings: () => this.renderSettings(),
-            mapping: () => this.renderMapping(),
+            mapping: () => { this.renderMapping(); Ads.carousel(document.getElementById('ads-mapping'), 'mandos', 'mapping'); },
+            products: () => Ads.catalog(document.getElementById('products-list')),
             skin: () => this.renderSkins(),
             about: () => this.renderAbout(),
             cheats: () => this.renderCheats(),
@@ -2840,6 +2848,9 @@ const App = {
                 break;
             case 'theme':
                 this.nextTheme();
+                break;
+            case 'ad-close':
+                Ads.closeInterstitial(this);
                 break;
             case 'audio-reload':
                 this.reloadForAudio();
