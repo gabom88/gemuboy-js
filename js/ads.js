@@ -115,6 +115,14 @@ const Ads = {
         } catch (ignored) { }
     },
 
+    shuffle(list) {
+        for (let i = list.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [list[i], list[j]] = [list[j], list[i]];
+        }
+        return list;
+    },
+
     // Least recently shown first, random among equals (never seen = 0).
     order(ads) {
         const seen = this.seen();
@@ -154,7 +162,7 @@ const Ads = {
             return;
         }
         container.innerHTML = `
-            <div class="ads-head"><span>Patrocinado · AliExpress</span>
+            <div class="ads-head"><span>🔥 Ofertas para gamers</span>
                 <button type="button" class="ads-all" data-action="page" data-page-target="products">Ver productos ›</button></div>
             <div class="ads-track"></div>
             <p class="ads-note"></p>`;
@@ -242,7 +250,7 @@ const Ads = {
             return;
         }
         container.innerHTML = `
-            <div class="ads-head"><span>Patrocinado · AliExpress</span>
+            <div class="ads-head"><span>🔥 Ofertas para gamers</span>
                 <button type="button" class="ads-all" data-action="page" data-page-target="products">Ver productos ›</button></div>
             <div class="ads-marquee"><div class="ads-belt"></div></div>
             <p class="ads-note"></p>`;
@@ -334,16 +342,18 @@ const Ads = {
             container.innerHTML = `<p class="empty">${navigator.onLine ? 'Todavía no hay productos.' : 'Conéctate a internet para ver los productos.'}</p>`;
             return;
         }
-        const section = (title, ads, where) => {
+        const section = (title, ads, where, keepOrder) => {
             if (!ads.length) {
                 return;
             }
-            const h = document.createElement('h2');
-            h.textContent = title;
-            container.appendChild(h);
+            if (title) {
+                const h = document.createElement('h2');
+                h.textContent = title;
+                container.appendChild(h);
+            }
             const grid = document.createElement('div');
             grid.className = 'products';
-            this.order(ads).forEach((ad, index) => {
+            (keepOrder ? ads : this.order(ads)).forEach((ad, index) => {
                 const card = this.link(ad, where, index + 1);
                 card.className = 'product';
                 const pic = document.createElement('span');
@@ -374,8 +384,8 @@ const Ads = {
             });
             container.appendChild(grid);
         };
-        section('Mandos Bluetooth', mandos, 'products-mandos');
-        section('Más productos', general, 'products');
+        // Both lists mixed at random (least recently seen first).
+        section('', this.shuffle([...mandos, ...general]), 'products', true);
         const note = document.createElement('p');
         note.className = 'ads-note';
         note.textContent = this.note;

@@ -3140,3 +3140,8 @@ a.btn.block[hidden],
 .ads-belt .ad {
     flex: none;
 }
+
+/* Products belt right under the now-playing card */
+.ads.ads-top {
+    margin: 4px 0 14px;
+}
