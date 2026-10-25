@@ -1242,6 +1242,75 @@ const App = {
     },
 
     // Shown once, the first time the app opens.
+    // ----------------------------------------------------------------- invite
+    inviteUrl: 'https://gboy-js.web.app/',
+
+    inviteText() {
+        return I18n.tr('🎮 Juega Game Boy y Game Boy Color gratis en tu navegador con GBoy-JS: sin instalar nada, también sin conexión y con mando. ¡Pruébalo!')
+            + '\n' + this.inviteUrl;
+    },
+
+    openInvite() {
+        document.getElementById('invite-share').hidden = !navigator.share;
+        document.getElementById('invite-dialog').hidden = false;
+        Analytics.event('invite_open');
+    },
+
+    async copyInvite() {
+        const text = this.inviteText();
+        let copied = false;
+        try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+        } catch (error) {
+            // Older browsers: copy through a hidden text area.
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.cssText = 'position:fixed;left:-9999px;top:0';
+            document.body.appendChild(area);
+            area.select();
+            try {
+                copied = document.execCommand('copy');
+            } catch (ignored) { }
+            area.remove();
+        }
+        this.toast(copied ? '✅ Invitación copiada: pégala en WhatsApp, Telegram o donde quieras' : this.inviteUrl, 3500);
+        Analytics.event('invite_copy', { ok: copied ? 1 : 0 });
+    },
+
+    async shareInvite() {
+        try {
+            await navigator.share({ title: 'GBoy-JS', text: this.inviteText().split('\n')[0], url: this.inviteUrl });
+            Analytics.event('invite_share');
+        } catch (ignored) { }
+    },
+
+    // Hidden switch for the ads: 10 quick taps on the GBoy-JS logo of the main
+    // menu turn them off on this device, 3 quick taps turn them back on. Nothing
+    // is shown while tapping.
+    onLogoTap() {
+        if (this.page !== 'main') {
+            return;
+        }
+        const now = performance.now();
+        if (now < (this.logoQuietUntil || 0)) {
+            return;
+        }
+        this.logoTaps = now - (this.lastLogoTap || 0) < 700 ? (this.logoTaps || 0) + 1 : 1;
+        this.lastLogoTap = now;
+        const off = Ads.off;
+        if ((!off && this.logoTaps >= 10) || (off && this.logoTaps >= 3)) {
+            Ads.setOff(!off);
+            this.logoTaps = 0;
+            this.logoQuietUntil = now + 1500;
+            this.renderMain();
+            if (off) {
+                Ads.marquee(document.getElementById('ads-main'), 'main');
+            }
+        }
+    },
+
     showWelcome() {
         if (!Store.getJSON('welcomed', false)) {
             document.getElementById('welcome').hidden = false;
@@ -1684,6 +1753,17 @@ const App = {
     },
 
     renderMain() {
+        // Ads hidden with the logo switch: no belt and no "Productos" tile.
+        const productsTile = this.el.menu.querySelector('.tile[data-page-target="products"]');
+        productsTile.hidden = Ads.off;
+        const ads = document.getElementById('ads-main');
+        if (Ads.off) {
+            Ads.stop(ads);
+            ads.hidden = true;
+        }
+        // An odd number of tiles: the last one takes the whole row.
+        const tiles = [...this.el.menu.querySelectorAll('.tiles .tile')].filter((tile) => !tile.hidden);
+        tiles.forEach((tile, i) => tile.classList.toggle('wide', i === tiles.length - 1 && tiles.length % 2 === 1));
         const hasGame = !!this.engine;
         const now = document.getElementById('now-playing');
         if (hasGame) {
@@ -2668,6 +2748,7 @@ const App = {
             }
         });
 
+        document.getElementById('menu-title').addEventListener('click', () => this.onLogoTap());
         this.setupPanelDrag(this.el.editor);
         this.setupPanelDrag(this.el.screenEditor);
 
@@ -2869,6 +2950,18 @@ const App = {
             }
             case 'welcome-close':
                 this.closeWelcome();
+                break;
+            case 'invite':
+                this.openInvite();
+                break;
+            case 'invite-copy':
+                this.copyInvite();
+                break;
+            case 'invite-share':
+                this.shareInvite();
+                break;
+            case 'invite-close':
+                document.getElementById('invite-dialog').hidden = true;
                 break;
             case 'welcome-games':
                 this.closeWelcome();

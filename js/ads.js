@@ -19,6 +19,25 @@ const Ads = {
     closeDelay: 3,
     cache: {},
 
+    // Hidden switch (see App.onLogoTap): stored on this device only.
+    get off() {
+        try {
+            return localStorage.getItem('gemuboy:adsOff') === '1';
+        } catch (error) {
+            return false;
+        }
+    },
+
+    setOff(off) {
+        try {
+            if (off) {
+                localStorage.setItem('gemuboy:adsOff', '1');
+            } else {
+                localStorage.removeItem('gemuboy:adsOff');
+            }
+        } catch (ignored) { }
+    },
+
     load(name) {
         if (!this.cache[name]) {
             this.cache[name] = fetch(this.lists[name], { cache: 'no-cache' })
@@ -154,7 +173,7 @@ const Ads = {
         this.stop(container);
         container.hidden = true;
         container.innerHTML = '';
-        if (!navigator.onLine) {
+        if (!navigator.onLine || this.off) {
             return;
         }
         const ads = this.order(await this.load(list)).slice(0, 12);
@@ -241,7 +260,7 @@ const Ads = {
         this.stop(container);
         container.hidden = true;
         container.innerHTML = '';
-        if (!navigator.onLine) {
+        if (!navigator.onLine || this.off) {
             return;
         }
         const [general, mandos] = await Promise.all([this.load('general'), this.load('mandos')]);
@@ -407,6 +426,10 @@ const Ads = {
 
     // ------------------------------------------------------------- catalog
     async catalog(container) {
+        if (this.off) {
+            container.innerHTML = '';
+            return;
+        }
         container.innerHTML = '<p class="note">Cargando productos…</p>';
         const [mandos, general] = await Promise.all([this.load('mandos'), this.load('general')]);
         container.innerHTML = '';
@@ -469,7 +492,7 @@ const Ads = {
     // Pauses the game behind a dialog with one product; the ✕ appears after
     // 3 seconds and closing it resumes the game.
     async interstitial(app) {
-        if (!navigator.onLine || Date.now() - (this.lastInterstitial || 0) < this.interstitialEvery) {
+        if (!navigator.onLine || this.off || Date.now() - (this.lastInterstitial || 0) < this.interstitialEvery) {
             return;
         }
         const ads = this.order(await this.load('general'));
