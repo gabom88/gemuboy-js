@@ -21,6 +21,8 @@ const Engines = {
 
     // Super Game Boy borders for games that support them (SameBoy only).
     sgb: true,
+    // Super Game Boy border shown (false: SGB colors without the border).
+    sgbFrame: true,
     // Seconds of play that can be rewound.
     rewindSeconds: 20,
 
@@ -298,6 +300,9 @@ class SameBoyEngine {
         M._sb_init(this.isCgb ? 1 : this.isSgb ? 2 : 0, this.sampleRate);
         this.withBuffer(rom, (ptr) => M._sb_load_rom(ptr, rom.length));
         M._sb_set_rewind(Engines.rewindSeconds);
+        if (this.isSgb && !Engines.sgbFrame) {
+            M._sb_set_border(0);
+        }
         this.width = M._sb_width();
         this.height = M._sb_height();
         this.gain = Sound.ctx.createGain();
@@ -405,6 +410,13 @@ class SameBoyEngine {
 
     hasSaveData() {
         return this.batterySize > 0;
+    }
+
+    setBorder(on) {
+        this.M._sb_set_border(on ? 1 : 0);
+        this.width = this.M._sb_width();
+        this.height = this.M._sb_height();
+        this.frameReady = true;
     }
 
     rewindStep() {

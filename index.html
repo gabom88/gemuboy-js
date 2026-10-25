@@ -94,6 +94,24 @@
                 <span>Marco de pantalla estilo Game Boy</span>
                 <input type="checkbox" class="toggle" id="scr-frame">
             </label>
+            <details class="screen-more">
+                <summary>Más ajustes de pantalla</summary>
+                <label class="row"><span>Escalado</span>
+                    <select data-setting="scaleMode">
+                        <option value="fit">Ajustar a la pantalla</option>
+                        <option value="integer">Píxeles perfectos (entero)</option>
+                    </select></label>
+                <label class="row check"><span>Efecto LCD (rejilla)</span>
+                    <input type="checkbox" class="toggle" data-setting="lcdEffect"></label>
+                <label class="row check"><span>Suavizado</span>
+                    <input type="checkbox" class="toggle" data-setting="smoothing"></label>
+                <label class="row check"><span>Mostrar FPS</span>
+                    <input type="checkbox" class="toggle" data-setting="showFps"></label>
+                <label class="row check"><span>Colores de Super Game Boy</span>
+                    <input type="checkbox" class="toggle" data-setting="sgbBorders"></label>
+                <label class="row check"><span>Marco de Super Game Boy</span>
+                    <input type="checkbox" class="toggle" data-setting="sgbFrame"></label>
+            </details>
             <div class="editor-actions">
                 <button type="button" class="btn ghost" data-action="screen-reset">Restablecer</button>
                 <button type="button" class="btn primary" data-action="screen-done">Listo</button>
@@ -432,10 +450,12 @@
                         <input type="checkbox" class="toggle" data-setting="smoothing"></label>
                     <label class="row check"><span>Mostrar FPS</span>
                         <input type="checkbox" class="toggle" data-setting="showFps"></label>
-                    <label class="row check"><span>Marcos y colores de Super Game Boy</span>
+                    <label class="row check"><span>Colores de Super Game Boy</span>
                         <input type="checkbox" class="toggle" data-setting="sgbBorders"></label>
-                    <p class="note">Los juegos de Game Boy preparados para Super Game Boy se muestran con su marco y sus
-                        colores (solo con el motor SameBoy).</p>
+                    <label class="row check"><span>Marco de Super Game Boy</span>
+                        <input type="checkbox" class="toggle" data-setting="sgbFrame"></label>
+                    <p class="note">Los juegos de Game Boy preparados para Super Game Boy se muestran con sus colores y,
+                        si quieres, con su marco (solo con el motor SameBoy).</p>
 
                     <h2>Motor de emulación</h2>
                     <label class="row"><span>Motor de Game Boy</span>

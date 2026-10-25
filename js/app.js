@@ -18,6 +18,7 @@ const App = {
         turboSpeed: '3',
         slowSpeed: '0.5',
         sgbBorders: true,
+        sgbFrame: true,
         lang: '',
         scaleMode: 'fit',
         lcdEffect: false,
@@ -72,6 +73,7 @@ const App = {
         Analytics.init(this.settings);
         I18n.init(this.settings.lang);
         Engines.sgb = !!this.settings.sgbBorders;
+        Engines.sgbFrame = this.settings.sgbFrame !== false;
         this.isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
         this.isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         this.isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -441,6 +443,7 @@ const App = {
         Controls.releaseAll();
         Input.releaseAll();
         this.el.screenEditor.hidden = false;
+        this.syncSettingInputs();
         this.placePanel(this.el.screenEditor);
         this.el.screenDrag.hidden = false;
         this.el.app.classList.add('screen-editing');
@@ -2118,7 +2121,15 @@ const App = {
         if (status) {
             status.textContent = this.audioStatus();
         }
-        this.el.menu.querySelectorAll('[data-setting]').forEach((input) => {
+        this.syncSettingInputs();
+        this.updateOutputs();
+        document.getElementById('row-silent-switch').hidden = !navigator.audioSession && !this.isIOS;
+        this.renderStorageInfo();
+    },
+
+    // Settings can appear in more than one place (menu and screen editor).
+    syncSettingInputs() {
+        document.querySelectorAll('[data-setting]').forEach((input) => {
             const value = this.settings[input.dataset.setting];
             if (input.type === 'checkbox') {
                 input.checked = !!value;
@@ -2126,9 +2137,6 @@ const App = {
                 input.value = String(value);
             }
         });
-        this.updateOutputs();
-        document.getElementById('row-silent-switch').hidden = !navigator.audioSession && !this.isIOS;
-        this.renderStorageInfo();
     },
 
     updateOutputs() {
@@ -2635,6 +2643,8 @@ const App = {
 
         menu.addEventListener('input', (ev) => this.onSettingInput(ev));
         menu.addEventListener('change', (ev) => this.onSettingInput(ev));
+        // The screen editor shows some display settings too.
+        this.el.screenEditor.addEventListener('change', (ev) => this.onSettingInput(ev));
 
         document.querySelectorAll('[data-custom]').forEach((input) => {
             input.addEventListener('input', () => {
@@ -2958,6 +2968,15 @@ const App = {
             Engines.sgb = !!value;
             this.toast('Se aplica la próxima vez que abras un juego', 3000);
         }
+        if (name === 'sgbFrame') {
+            Engines.sgbFrame = !!value;
+            // Applied at once to a Super Game Boy game that is running.
+            if (this.engine && this.engine.setBorder && this.engine.isSgb) {
+                this.engine.setBorder(!!value);
+                this.setScreenSize(this.engine.width, this.engine.height);
+            }
+        }
+        this.syncSettingInputs();
     },
 
     async handleAction(action, target) {
