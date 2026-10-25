@@ -3036,6 +3036,11 @@ const App = {
                     this.closeMenu();
                 }
                 break;
+            case 'lib-random':
+                if (await Library.playRandom()) {
+                    this.closeMenu();
+                }
+                break;
             case 'lib-fav': {
                 const entry = Library.find(target.dataset.id);
                 if (entry) {

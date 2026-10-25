@@ -720,6 +720,33 @@ const Library = {
         return this.app.loadFromLibrary(id);
     },
 
+    // "Surprise me": any game of the library, downloaded or not (it downloads
+    // first). Skips the running game and the last few surprises; if a download
+    // fails it tries another one (up to 3).
+    async playRandom() {
+        const current = this.app.game && this.app.game.entryId;
+        const playable = this.list().filter((entry) => entry.id !== current && (this.isDownloaded(entry) || this.isLink(entry.url)));
+        if (!playable.length) {
+            this.app.toast('La biblioteca está vacía. Usa «Añadir ROM» o «Importar lista».', 3500);
+            return false;
+        }
+        const recent = this.recentRandom || [];
+        let pool = playable.filter((entry) => !recent.includes(entry.id));
+        if (!pool.length) {
+            pool = playable;
+        }
+        for (let attempt = 0; attempt < 3 && pool.length; attempt++) {
+            const entry = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+            this.recentRandom = [entry.id, ...recent].slice(0, 10);
+            Analytics.event('random_game', { game_title: entry.title });
+            this.app.toast('🎲 Te tocó: ' + entry.title, 2500);
+            if (await this.play(entry.id)) {
+                return true;
+            }
+        }
+        return false;
+    },
+
     async removeDownload(id) {
         await Store.remove('rom:' + id);
         this.update(id, { where: null });
