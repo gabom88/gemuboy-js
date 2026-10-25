@@ -3,23 +3,23 @@ const Input = {
     buttons: ['a', 'b', 'start', 'select', 'up', 'down', 'left', 'right'],
 
     // Every action that can be bound to a key or a gamepad button.
-    actions: ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select', 'turbo', 'rewind', 'slow', 'menu', 'save', 'load'],
+    actions: ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select', 'turbo', 'rewind', 'slow', 'palette', 'menu', 'save', 'load'],
     actionNames: {
         up: 'Arriba', down: 'Abajo', left: 'Izquierda', right: 'Derecha',
         a: 'A', b: 'B', start: 'Start', select: 'Select',
-        turbo: 'Turbo', rewind: 'Rebobinar (mantener)', slow: 'Cámara lenta', menu: 'Menú', save: 'Guardar estado 1', load: 'Cargar estado 1',
+        turbo: 'Turbo', rewind: 'Rebobinar (mantener)', slow: 'Cámara lenta', palette: 'Cambiar paleta', menu: 'Menú', save: 'Guardar estado 1', load: 'Cargar estado 1',
     },
     defaultKeys: {
         up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'],
         a: ['KeyX', 'KeyK'], b: ['KeyZ', 'KeyJ'], start: ['Enter'], select: ['ShiftRight', 'Backspace'],
-        turbo: ['Space'], rewind: ['KeyR'], slow: ['KeyQ'], menu: ['Escape'], save: ['F2'], load: ['F4'],
+        turbo: ['Space'], rewind: ['KeyR'], slow: ['KeyQ'], palette: ['KeyP'], menu: ['Escape'], save: ['F2'], load: ['F4'],
     },
     // Gamepad bindings: 'b<n>' = button n, 'a<n>+' / 'a<n>-' = axis n positive / negative.
     // Defaults follow the "standard" layout (Xbox, PlayStation, Switch Pro, 8BitDo…).
     defaultPad: {
         up: ['b12', 'a1-'], down: ['b13', 'a1+'], left: ['b14', 'a0-'], right: ['b15', 'a0+'],
         a: ['b1', 'b3'], b: ['b0', 'b2'], start: ['b9'], select: ['b8'],
-        turbo: ['b7', 'b5'], rewind: [], slow: [], menu: ['b16'], save: ['b4'], load: ['b6'],
+        turbo: ['b7', 'b5'], rewind: [], slow: [], palette: [], menu: ['b16'], save: ['b4'], load: ['b6'],
     },
 
     touch: {},
@@ -166,6 +166,7 @@ const Controls = {
         turbo: { name: 'Turbo', w: 10, h: 10, label: '▶▶' },
         rewind: { name: 'Rebobinar', w: 10, h: 10, label: '◀◀' },
         slow: { name: 'Cámara lenta', w: 10, h: 10, label: '½×' },
+        palette: { name: 'Paleta de colores', w: 10, h: 10, label: '◐' },
         menu: { name: 'Menú', w: 10, h: 10, label: '☰' },
     },
 
@@ -182,6 +183,7 @@ const Controls = {
             rewind: { x: 0.08, y: 0.955, opacity: 0.5 },
             slow: { x: 0.2, y: 0.955, opacity: 0.5 },
             turbo: { x: 0.92, y: 0.955, opacity: 0.5 },
+            palette: { x: 0.8, y: 0.955, opacity: 0.5 },
             menu: { x: 0.5, y: 0.6, aboveDpad: true, opacity: 0.5 },
         },
         landscape: {
@@ -192,6 +194,7 @@ const Controls = {
             start: { x: 0.88, y: 0.92 },
             turbo: { x: 0.93, y: 0.13, opacity: 0.5 },
             rewind: { x: 0.84, y: 0.13, opacity: 0.5 },
+            palette: { x: 0.75, y: 0.13, opacity: 0.5 },
             slow: { x: 0.16, y: 0.13, opacity: 0.5 },
             menu: { x: 0.07, y: 0.13, opacity: 0.5 },
         },
@@ -409,7 +412,7 @@ const Controls = {
             const pad = id === 'dpad' ? 1.2 : 1.3;
             const dx = Math.abs(x - r.cx) / (r.w / 2 * pad);
             const dy = Math.abs(y - r.cy) / (r.h / 2 * pad);
-            const round = ['a', 'b', 'turbo', 'rewind', 'slow', 'menu'].includes(id);
+            const round = ['a', 'b', 'turbo', 'rewind', 'slow', 'palette', 'menu'].includes(id);
             const distance = round ? Math.hypot(dx, dy) : Math.max(dx, dy);
             if (distance <= 1 && distance < bestDistance) {
                 best = id;
@@ -500,6 +503,19 @@ const Controls = {
             this.haptic();
             return;
         }
+        // Palette: a tap goes to the next one; holding half a second goes back.
+        if (control === 'palette') {
+            const pointer = { control, x, y };
+            pointer.timer = setTimeout(() => {
+                pointer.held = true;
+                this.app.cyclePalette(-1);
+                this.haptic();
+            }, 500);
+            this.pointers.set(ev.pointerId, pointer);
+            this.update();
+            this.haptic();
+            return;
+        }
         if (control === 'slow') {
             this.pointers.set(ev.pointerId, { control, x, y });
             this.app.toggleSlowMotion();
@@ -527,7 +543,7 @@ const Controls = {
         if (pointer.control === 'screen') {
             return;
         }
-        if (!['dpad', 'menu', 'turbo', 'rewind', 'slow'].includes(pointer.control)) {
+        if (!['dpad', 'menu', 'turbo', 'rewind', 'slow', 'palette'].includes(pointer.control)) {
             // Allow sliding a finger between face buttons.
             const control = this.hitControl(x, y, ['a', 'b', 'start', 'select']);
             pointer.control = control || pointer.control;
@@ -561,6 +577,12 @@ const Controls = {
         }
         if (pointer.control === 'turbo' && this.app.settings.turboMode !== 'toggle') {
             Input.turboTouch = [...this.pointers.values()].some((p) => p.control === 'turbo');
+        }
+        if (pointer.control === 'palette') {
+            clearTimeout(pointer.timer);
+            if (!pointer.held && ev.type === 'pointerup') {
+                this.app.cyclePalette(1);
+            }
         }
         if (pointer.control === 'rewind') {
             Input.rewindTouch = [...this.pointers.values()].some((p) => p.control === 'rewind');
@@ -603,9 +625,13 @@ const Controls = {
         this.elements.turbo.classList.toggle('pressed', Input.turboTouch || !!this.app.turboToggled);
         this.elements.rewind.classList.toggle('pressed', Input.rewindTouch);
         this.elements.slow.classList.toggle('pressed', !!this.app.slowMotion);
+        this.elements.palette.classList.toggle('pressed', [...this.pointers.values()].some((p) => p.control === 'palette'));
     },
 
     releaseAll() {
+        for (const pointer of this.pointers.values()) {
+            clearTimeout(pointer.timer);
+        }
         this.pointers.clear();
         Input.touch = {};
         Input.turboTouch = false;
