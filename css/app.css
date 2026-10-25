@@ -3121,3 +3121,22 @@ a.btn.block[hidden],
     margin: 8px 0 0;
     font-size: 11px;
 }
+
+/* Main menu: endless product belt */
+.ads-marquee {
+    overflow: hidden;
+    touch-action: pan-y;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+
+.ads-belt {
+    display: flex;
+    gap: 10px;
+    width: max-content;
+    will-change: transform;
+}
+
+.ads-belt .ad {
+    flex: none;
+}
