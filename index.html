@@ -120,6 +120,7 @@
                     <button type="button" class="icon-btn" data-action="back" id="menu-back" aria-label="Atrás">‹</button>
                     <h1 id="menu-title"><span class="logo">GBoy-JS</span></h1>
                     <div class="header-actions">
+                        <button type="button" class="icon-btn round-btn invite-btn" data-action="invite" id="invite-btn" aria-label="Compartir GBoy-JS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg></button>
                         <button type="button" class="icon-btn round-btn lang-btn" data-action="lang" id="lang-btn" aria-label="Cambiar idioma a inglés"><span>EN</span></button>
                         <button type="button" class="icon-btn round-btn" data-action="gif" id="gif-btn" aria-label="Grabar GIF" hidden>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/><circle cx="7" cy="10" r="1.6" fill="currentColor" stroke="none"/></svg>
@@ -534,6 +535,19 @@
                     <button type="button" class="ad-close" data-action="ad-close" aria-label="Cerrar anuncio" disabled>3</button></div>
                 <div class="ad-slot"></div>
                 <p class="ads-note">Enlaces de afiliado: si compras, GBoy-JS recibe una pequeña comisión sin costo extra para ti.</p>
+            </div>
+        </div>
+
+        <!-- Invite friends -->
+        <div id="invite-dialog" class="dialog" hidden>
+            <div class="welcome-box" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+                <img src="img/icon-192.png" alt="" width="72" height="72">
+                <h2 id="invite-title">¡Comparte GBoy-JS!</h2>
+                <p>Invita a tus amigos a jugar Game Boy y Game Boy Color gratis, desde el navegador y sin instalar nada. 🎮</p>
+                <p class="invite-url" data-no-i18n>https://gboy-js.web.app/</p>
+                <button type="button" class="btn primary block invite-copy" data-action="invite-copy">COPIAR INVITACIÓN</button>
+                <button type="button" class="btn block" data-action="invite-share" id="invite-share" hidden>Compartir…</button>
+                <button type="button" class="btn ghost block" data-action="invite-close">Cerrar</button>
             </div>
         </div>
 

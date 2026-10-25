@@ -2736,7 +2736,11 @@ a.btn.block[hidden],
 }
 
 /* Tiles: an odd last tile takes the whole row */
-.tiles .tile:last-child:nth-child(odd) {
+.tile[hidden] {
+    display: none;
+}
+
+.tiles .tile.wide {
     grid-column: 1 / -1;
     flex-direction: row;
     min-height: 60px;
@@ -3144,4 +3148,69 @@ a.btn.block[hidden],
 /* Products belt right under the now-playing card */
 .ads.ads-top {
     margin: 4px 0 14px;
+}
+
+/* Invite button: shown on the main page, with a light glint */
+.invite-btn {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    color: var(--accent-2);
+    box-shadow: 0 0 0 0 var(--accent);
+    animation: invite-pulse 2.8s ease-in-out infinite;
+}
+
+.invite-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.invite-btn::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -60%;
+    width: 45%;
+    z-index: -1;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent);
+    transform: skewX(-20deg);
+    animation: shine 2.8s ease-in-out infinite;
+}
+
+@keyframes invite-pulse {
+    0%, 60%, 100% { box-shadow: 0 0 0 0 transparent; }
+    30% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+
+#menu:not([data-page="main"]) #invite-btn {
+    display: none;
+}
+
+/* Main page: the back button takes no room (the header has more buttons) */
+#menu[data-page="main"] #menu-back {
+    display: none;
+}
+
+#menu-title .logo {
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.invite-url {
+    margin: -4px 0 14px !important;
+    font-weight: 700;
+    color: var(--accent-2) !important;
+    word-break: break-all;
+}
+
+.welcome-box .btn.block + .btn.block {
+    margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .invite-btn,
+    .invite-btn::after {
+        animation: none;
+    }
 }
