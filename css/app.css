@@ -3277,3 +3277,16 @@ a.btn.block[hidden],
         animation: none;
     }
 }
+
+/* Screen editor: more display settings, folded */
+.screen-more {
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+}
+
+.screen-more summary {
+    padding: 10px 2px;
+    color: var(--accent-2);
+    font-weight: 600;
+    cursor: pointer;
+}

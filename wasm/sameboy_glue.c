@@ -133,6 +133,12 @@ EMSCRIPTEN_KEEPALIVE void sb_set_palette(const uint8_t *rgb) {
     GB_set_palette(gb, &palette);
 }
 
+// Super Game Boy border on/off (the SGB colors stay either way). Changes the
+// picture size: 256x224 with the border, 160x144 without.
+EMSCRIPTEN_KEEPALIVE void sb_set_border(int on) {
+    GB_set_border_mode(gb, on ? GB_BORDER_SGB : GB_BORDER_NEVER);
+}
+
 // Rewind: SameBoy keeps compressed snapshots of the last seconds of play.
 EMSCRIPTEN_KEEPALIVE void sb_set_rewind(double seconds) { GB_set_rewind_length(gb, seconds); }
 

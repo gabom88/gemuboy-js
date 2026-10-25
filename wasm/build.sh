@@ -16,6 +16,9 @@ git -C "$WORK/SameBoy" fetch --quiet origin "$SAMEBOY_REF" 2>/dev/null || true
 git -C "$WORK/SameBoy" checkout --quiet "$SAMEBOY_REF"
 VERSION="$(sed -n 's/^VERSION := //p' "$WORK/SameBoy/version.mk")"
 
+# Super Game Boy graphics with "Super Game Boy" instead of "Super SameBoy" (see wasm/sgb).
+cp "$ROOT/wasm/sgb/sgb_border.inc" "$ROOT/wasm/sgb/sgb_animation_logo.inc" "$WORK/SameBoy/Core/graphics/"
+
 # Boot ROMs -> C arrays
 python3 - "$ROOT/wasm/bootroms" "$WORK/bootroms.h" <<'PY'
 import sys, pathlib
