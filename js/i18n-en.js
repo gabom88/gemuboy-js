@@ -448,6 +448,7 @@ const I18nEnglish = {
         '🔇 Toca la pantalla del juego para reactivar el sonido': '🔇 Tap the game screen to turn the sound back on',
         '🔊 Sonido reiniciado': '🔊 Sound restarted',
         '🔥 Ofertas para gamers': '🔥 Deals for gamers',
+        'Borrar búsqueda': 'Clear search',
         'Colores de Super Game Boy': 'Super Game Boy colors',
         'Marco de Super Game Boy': 'Super Game Boy border',
         'Los juegos de Game Boy preparados para Super Game Boy se muestran con sus colores y, si quieres, con su marco (solo con el motor SameBoy).': 'Game Boy games made for the Super Game Boy are shown with their colors and, if you like, their border (SameBoy engine only).',

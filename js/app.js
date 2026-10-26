@@ -2689,13 +2689,21 @@ const App = {
 
         // Library: search, filter, sort.
         const search = document.getElementById('lib-search');
+        const clear = document.getElementById('lib-search-clear');
         search.addEventListener('input', () => {
+            clear.hidden = !search.value;
             clearTimeout(this.searchTimer);
             this.searchTimer = setTimeout(() => {
                 Library.view.query = search.value;
                 Library.view.limit = 60;
                 Library.render();
             }, 150);
+        });
+        // ✕ inside the search box: empties it (iOS has no native one).
+        clear.addEventListener('click', () => {
+            search.value = '';
+            search.dispatchEvent(new Event('input'));
+            search.focus();
         });
         document.getElementById('lib-filter').addEventListener('change', (ev) => {
             Library.view.filter = ev.target.value;
