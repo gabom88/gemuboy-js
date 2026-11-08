@@ -3,22 +3,22 @@ const Input = {
     buttons: ['a', 'b', 'start', 'select', 'up', 'down', 'left', 'right'],
 
     // Every action that can be bound to a key or a gamepad button.
-    actions: ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select', 'turbo', 'rewind', 'slow', 'palette', 'menu', 'save', 'load'],
+    actions: ['up', 'down', 'left', 'right', 'a', 'b', 'turboA', 'turboB', 'start', 'select', 'turbo', 'rewind', 'slow', 'palette', 'menu', 'save', 'load'],
     actionNames: {
         up: 'Arriba', down: 'Abajo', left: 'Izquierda', right: 'Derecha',
-        a: 'A', b: 'B', start: 'Start', select: 'Select',
+        a: 'A', b: 'B', turboA: 'A turbo', turboB: 'B turbo', start: 'Start', select: 'Select',
         turbo: 'Turbo', rewind: 'Rebobinar (mantener)', slow: 'Cámara lenta', palette: 'Cambiar paleta', menu: 'Menú', save: 'Guardar estado 1', load: 'Cargar estado 1',
     },
     defaultKeys: {
         up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'],
-        a: ['KeyX', 'KeyK'], b: ['KeyZ', 'KeyJ'], start: ['Enter'], select: ['ShiftRight', 'Backspace'],
+        a: ['KeyX', 'KeyK'], b: ['KeyZ', 'KeyJ'], turboA: ['KeyC'], turboB: ['KeyV'], start: ['Enter'], select: ['ShiftRight', 'Backspace'],
         turbo: ['Space'], rewind: ['KeyR'], slow: ['KeyQ'], palette: ['KeyP'], menu: ['Escape'], save: ['F2'], load: ['F4'],
     },
     // Gamepad bindings: 'b<n>' = button n, 'a<n>+' / 'a<n>-' = axis n positive / negative.
     // Defaults follow the "standard" layout (Xbox, PlayStation, Switch Pro, 8BitDo…).
     defaultPad: {
         up: ['b12', 'a1-'], down: ['b13', 'a1+'], left: ['b14', 'a0-'], right: ['b15', 'a0+'],
-        a: ['b1', 'b3'], b: ['b0', 'b2'], start: ['b9'], select: ['b8'],
+        a: ['b1', 'b3'], b: ['b0', 'b2'], turboA: [], turboB: [], start: ['b9'], select: ['b8'],
         turbo: ['b7', 'b5'], rewind: [], slow: [], palette: [], menu: ['b16'], save: ['b4'], load: ['b6'],
     },
 
@@ -58,9 +58,24 @@ const Input = {
         return !!(this.rewindTouch || this.keys.rewind || this.pad.rewind);
     },
 
+    // Autofire buttons (A turbo / B turbo): while held, A or B is pressed and
+    // released by itself, 2 frames down and 2 up (15 presses per second).
+    autofireFrame: 0,
+
+    held(action) {
+        return !!(this.touch[action] || this.keys[action] || this.pad[action]);
+    },
+
     apply(joypad) {
         for (const button of this.buttons) {
             joypad[button] = this.pressed(button);
+        }
+        const fire = (this.autofireFrame++ >> 1) % 2 === 0;
+        if (fire && this.held('turboA')) {
+            joypad.a = true;
+        }
+        if (fire && this.held('turboB')) {
+            joypad.b = true;
         }
         // Opposite directions can't be pressed at the same time on real hardware.
         if (joypad.left && joypad.right) {
@@ -161,6 +176,8 @@ const Controls = {
         dpad: { name: 'Cruceta', w: 40, h: 40 },
         a: { name: 'Botón A', w: 17, h: 17, label: 'A' },
         b: { name: 'Botón B', w: 17, h: 17, label: 'B' },
+        ta: { name: 'A turbo', w: 17, h: 17, label: 'A' },
+        tb: { name: 'B turbo', w: 17, h: 17, label: 'B' },
         select: { name: 'Select', w: 16, h: 8, label: 'SELECT' },
         start: { name: 'Start', w: 16, h: 8, label: 'START' },
         turbo: { name: 'Turbo', w: 10, h: 10, label: '▶▶' },
@@ -175,6 +192,9 @@ const Controls = {
             dpad: { x: 0.24, y: 0.74 },
             a: { x: 0.85, y: 0.7 },
             b: { x: 0.65, y: 0.765 },
+            // Autofire A / B: off by default, turned on in the controls editor.
+            ta: { x: 0.87, y: 0.525, visible: false },
+            tb: { x: 0.69, y: 0.59, visible: false },
             select: { x: 0.37, y: 0.895 },
             start: { x: 0.57, y: 0.895 },
             // Bottom corners: rewind and slow motion on the left, turbo on the right.
@@ -190,6 +210,8 @@ const Controls = {
             dpad: { x: 0.12, y: 0.6 },
             a: { x: 0.92, y: 0.5 },
             b: { x: 0.81, y: 0.66 },
+            ta: { x: 0.92, y: 0.3, visible: false },
+            tb: { x: 0.81, y: 0.46, visible: false },
             select: { x: 0.12, y: 0.92 },
             start: { x: 0.88, y: 0.92 },
             turbo: { x: 0.93, y: 0.13, opacity: 0.5 },
@@ -218,6 +240,8 @@ const Controls = {
                 el.dataset.st = 'rest';
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
+            } else if (id === 'ta' || id === 'tb') {
+                el.innerHTML = `<div class="face"><span>⚡</span></div><em>TURBO ${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
                 el.innerHTML = `<div class="rot"><div class="slot"></div><div class="pill"></div><em>${this.defs[id].label}</em></div>`;
             } else {
@@ -231,6 +255,9 @@ const Controls = {
         this.abWell = document.createElement('div');
         this.abWell.className = 'ab-well';
         this.layer.prepend(this.abWell);
+        this.turboWell = document.createElement('div');
+        this.turboWell.className = 'ab-well';
+        this.layer.prepend(this.turboWell);
 
         this.layer.addEventListener('pointerdown', (ev) => this.onDown(ev), { passive: false });
         this.layer.addEventListener('pointermove', (ev) => this.onMove(ev), { passive: false });
@@ -347,7 +374,8 @@ const Controls = {
                 this.rects[id] = { cx, cy, w, h };
             }
         }
-        this.renderAbWell(layout, globalOpacity);
+        this.renderAbWell(layout, globalOpacity, this.abWell, 'a', 'b');
+        this.renderAbWell(layout, globalOpacity, this.turboWell, 'ta', 'tb');
         this.layer.classList.toggle('editing', this.editing);
     },
 
@@ -360,11 +388,12 @@ const Controls = {
         return `<rect class="shade" x="${left}" y="${top}" width="${Math.abs(x2 - x1) + 6}" height="${Math.abs(y2 - y1) + 6}" rx="3" fill="url(#sink-${dir})"/>`;
     },
 
-    renderAbWell(layout, globalOpacity) {
-        const a = this.elements.a;
-        const b = this.elements.b;
-        const visible = !a.classList.contains('hidden') && !b.classList.contains('hidden') && layout.a.visible && layout.b.visible;
-        this.abWell.hidden = !visible;
+    // The slanted oval recess behind a pair of round buttons (A/B, turbo A/B).
+    renderAbWell(layout, globalOpacity, well, idA, idB) {
+        const a = this.elements[idA];
+        const b = this.elements[idB];
+        const visible = !a.classList.contains('hidden') && !b.classList.contains('hidden') && layout[idA].visible && layout[idB].visible;
+        well.hidden = !visible;
         if (!visible) {
             return;
         }
@@ -376,17 +405,17 @@ const Controls = {
         const size = Math.max(ra.w, rb.w);
         // Only draw the oval while the buttons sit reasonably close together.
         if (distance > size * 2.6) {
-            this.abWell.hidden = true;
+            well.hidden = true;
             return;
         }
         const thickness = size * 1.28;
         const length = distance + thickness;
         const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-        Object.assign(this.abWell.style, {
+        Object.assign(well.style, {
             width: length + 'px',
             height: thickness + 'px',
             transform: `translate(${(ra.cx + rb.cx) / 2 - length / 2}px, ${(ra.cy + rb.cy) / 2 - thickness / 2}px) rotate(${angle}deg)`,
-            opacity: Math.min(1, globalOpacity * Math.max(layout.a.opacity, layout.b.opacity)),
+            opacity: Math.min(1, globalOpacity * Math.max(layout[idA].opacity, layout[idB].opacity)),
         });
     },
 
@@ -412,7 +441,7 @@ const Controls = {
             const pad = id === 'dpad' ? 1.2 : 1.3;
             const dx = Math.abs(x - r.cx) / (r.w / 2 * pad);
             const dy = Math.abs(y - r.cy) / (r.h / 2 * pad);
-            const round = ['a', 'b', 'turbo', 'rewind', 'slow', 'palette', 'menu'].includes(id);
+            const round = ['a', 'b', 'ta', 'tb', 'turbo', 'rewind', 'slow', 'palette', 'menu'].includes(id);
             const distance = round ? Math.hypot(dx, dy) : Math.max(dx, dy);
             if (distance <= 1 && distance < bestDistance) {
                 best = id;
@@ -545,7 +574,7 @@ const Controls = {
         }
         if (!['dpad', 'menu', 'turbo', 'rewind', 'slow', 'palette'].includes(pointer.control)) {
             // Allow sliding a finger between face buttons.
-            const control = this.hitControl(x, y, ['a', 'b', 'start', 'select']);
+            const control = this.hitControl(x, y, ['a', 'b', 'ta', 'tb', 'start', 'select']);
             pointer.control = control || pointer.control;
             pointer.inside = !!control;
         }
@@ -597,6 +626,10 @@ const Controls = {
                 for (const dir of this.dpadDirections(pointer.x, pointer.y)) {
                     state[dir] = true;
                 }
+            } else if (pointer.control === 'ta' || pointer.control === 'tb') {
+                if (pointer.inside !== false) {
+                    state[pointer.control === 'ta' ? 'turboA' : 'turboB'] = true;
+                }
             } else if (Input.buttons.includes(pointer.control)) {
                 if (pointer.inside !== false) {
                     state[pointer.control] = true;
@@ -608,7 +641,7 @@ const Controls = {
                 }
             }
         }
-        const newlyPressed = Input.buttons.some((b) => state[b] && !Input.touch[b]);
+        const newlyPressed = [...Input.buttons, 'turboA', 'turboB'].some((b) => state[b] && !Input.touch[b]);
         Input.touch = state;
         if (newlyPressed) {
             this.haptic();
@@ -617,6 +650,8 @@ const Controls = {
         for (const id of ['a', 'b', 'start', 'select']) {
             this.elements[id].classList.toggle('pressed', !!state[id]);
         }
+        this.elements.ta.classList.toggle('pressed', !!state.turboA);
+        this.elements.tb.classList.toggle('pressed', !!state.turboB);
         const dpad = this.elements.dpad;
         for (const dir of ['up', 'down', 'left', 'right']) {
             dpad.classList.toggle('p-' + dir, !!state[dir]);

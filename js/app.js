@@ -2251,8 +2251,7 @@ const App = {
     },
 
     // The editor panels can be dragged up and down by their grip so the whole
-    // console stays visible; dragging it up hides it, leaving only the grip.
-    // A tap on the grip hides or shows it.
+    // console stays visible; dragged up, only the grip remains on screen.
     panelOffsets: {},
 
     placePanel(panel) {
@@ -2264,7 +2263,8 @@ const App = {
         const appH = this.el.app.clientHeight;
         const h = panel.offsetHeight;
         const top = panel.offsetTop;
-        const min = -(top + h - 34); // only the grip stays visible
+        // Dragged up, the grip always stays reachable below the notch / status bar.
+        const min = -(top + h - 34 - this.safeInsets().top - 6);
         const max = Math.max(0, appH - top - h - 8);
         return Math.min(Math.max(offset, min), max);
     },
@@ -2292,10 +2292,6 @@ const App = {
         const end = () => {
             if (!drag) {
                 return;
-            }
-            if (!drag.moved) {
-                const hidden = this.panelOffsets[panel.id] <= this.clampPanel(panel, -1e6) + 2;
-                this.panelOffsets[panel.id] = hidden ? 0 : -1e6;
             }
             this.panelOffsets[panel.id] = this.clampPanel(panel, this.panelOffsets[panel.id]);
             this.placePanel(panel);
@@ -2794,7 +2790,7 @@ const App = {
             }
             this.unlockAudio();
             for (const action of actions) {
-                if (Input.buttons.includes(action) || action === 'turbo' || action === 'rewind') {
+                if (Input.buttons.includes(action) || ['turbo', 'rewind', 'turboA', 'turboB'].includes(action)) {
                     if (!this.menuOpen) {
                         Input.keys[action] = true;
                     }
