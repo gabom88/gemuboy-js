@@ -241,7 +241,7 @@ const Controls = {
             } else if (id === 'a' || id === 'b') {
                 el.innerHTML = `<div class="face"></div><em>${this.defs[id].label}</em>`;
             } else if (id === 'ta' || id === 'tb') {
-                el.innerHTML = `<div class="face"><span>⚡</span></div><em>TURBO ${this.defs[id].label}</em>`;
+                el.innerHTML = `<div class="face"></div><em>TURBO ${this.defs[id].label}</em>`;
             } else if (id === 'start' || id === 'select') {
                 el.innerHTML = `<div class="rot"><div class="slot"></div><div class="pill"></div><em>${this.defs[id].label}</em></div>`;
             } else {

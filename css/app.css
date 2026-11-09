@@ -3341,16 +3341,10 @@ a.btn.block[hidden],
     color: var(--text);
 }
 
-/* Turbo A / B: like A and B, a bit lighter, with a bolt */
+/* Turbo A / B: like A and B, a bit lighter */
 .ctrl-ta .face,
 .ctrl-tb .face {
     filter: saturate(.85) brightness(1.12);
-}
-
-.ctrl-ta .face span,
-.ctrl-tb .face span {
-    font-size: .7em;
-    opacity: .8;
 }
 
 .ctrl-ta em,
